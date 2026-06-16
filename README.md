@@ -223,6 +223,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 - Made with care for the DEFQON.1 community
 - Powered by [Mixlr](https://mixlr.com/)
 - Built with [Go](https://go.dev/) and [tview](https://github.com/rivo/tview)
+- Timetable data based on work by [codecat](https://github.com/codecat)
 
 ---
 
