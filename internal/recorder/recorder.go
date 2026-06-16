@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/revunix/defqon1-recorder/internal/logging"
+	"github.com/revunix/defqon1-recorder/internal/tools"
 )
 
 type Snapshot struct {
@@ -35,6 +36,7 @@ type recording struct {
 type Manager struct {
 	dir          string
 	stalledAfter time.Duration
+	paths        tools.Paths
 	log          logging.Logger
 
 	mu     sync.RWMutex
@@ -44,13 +46,20 @@ type Manager struct {
 	stopped int32
 }
 
-func New(dir string, stalledAfter time.Duration, log logging.Logger) *Manager {
+func New(dir string, stalledAfter time.Duration, toolsDir string, log logging.Logger) *Manager {
 	if log == nil {
 		log = logging.Noop{}
 	}
+	paths := tools.Resolve(toolsDir)
+	ffmpeg := paths.FFmpegDir
+	if ffmpeg == "" {
+		ffmpeg = "PATH"
+	}
+	log.Info(fmt.Sprintf("yt-dlp: %s | ffmpeg: %s", paths.YtDLP, ffmpeg))
 	return &Manager{
 		dir:          dir,
 		stalledAfter: stalledAfter,
+		paths:        paths,
 		log:          log,
 		active:       make(map[string]*recording),
 	}
@@ -79,11 +88,17 @@ func (m *Manager) Start(stage, streamURL string, listeners int) {
 
 	fileName := fmt.Sprintf("%s_%s.mp3", stage, time.Now().UTC().Format("2006-01-02T15-04-05.000Z"))
 	outputPath := filepath.Join(m.dir, fileName)
-	cmd := exec.Command("yt-dlp",
+
+	args := []string{
 		"--no-part", "-f", "bestaudio", "--extract-audio",
 		"--audio-format", "mp3", "--live-from-start",
-		"-o", outputPath, streamURL,
-	)
+	}
+	if m.paths.FFmpegDir != "" {
+		args = append(args, "--ffmpeg-location", m.paths.FFmpegDir)
+	}
+	args = append(args, "-o", outputPath, streamURL)
+
+	cmd := exec.Command(m.paths.YtDLP, args...)
 	rec := &recording{
 		stage:     stage,
 		cmd:       cmd,

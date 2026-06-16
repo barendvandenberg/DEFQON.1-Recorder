@@ -44,7 +44,7 @@ func main() {
 	}
 
 	client := mixlr.New(cfg.APIBaseURL)
-	rec := recorder.New(cfg.RecordingsDir, cfg.StalledTimeout, logger)
+	rec := recorder.New(cfg.RecordingsDir, cfg.StalledTimeout, cfg.ToolsDir, logger)
 	reg := status.New(cfg.Channels)
 	ctrl := controller.New(client, rec, tt, reg, logger, cfg.Channels)
 

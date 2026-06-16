@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -11,6 +12,7 @@ type Config struct {
 	Channels             []string
 	RecordingsDir        string
 	TimetablePath        string
+	ToolsDir             string
 	CheckInterval        time.Duration
 	StalledCheckInterval time.Duration
 	StalledTimeout       time.Duration
@@ -28,6 +30,7 @@ func Default() Config {
 		},
 		RecordingsDir:        envOr("RECORDINGS_DIR", "recordings"),
 		TimetablePath:        envOr("TIMETABLE_PATH", "dq-timetable.json"),
+		ToolsDir:             envOr("TOOLS_DIR", exeDir()),
 		CheckInterval:        envDurationMSOr("CHECK_INTERVAL_MS", 60_000*time.Millisecond),
 		StalledCheckInterval: 30 * time.Second,
 		StalledTimeout:       60 * time.Second,
@@ -40,6 +43,19 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// exeDir returns the directory of the running executable, used to locate
+// bundled yt-dlp / ffmpeg binaries.
+func exeDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "."
+	}
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = resolved
+	}
+	return filepath.Dir(exe)
 }
 
 func envDurationMSOr(key string, def time.Duration) time.Duration {

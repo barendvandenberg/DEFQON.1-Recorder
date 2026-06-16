@@ -55,7 +55,7 @@ check: fmt vet
 clean:
 	rm -rf $(APP) bin $(DIST) coverage.txt
 
-## release: cross-compile binaries for mac/linux/windows into dist/ and bundle archives
+## release: cross-compile binaries for mac/linux/windows and bundle yt-dlp + ffmpeg
 .PHONY: release
 release:
 	@mkdir -p $(DIST)
@@ -64,25 +64,13 @@ release:
 		arch=$${target#*/}; \
 		ext=""; \
 		[ $$os = windows ] && ext=".exe"; \
-		bin=$(DIST)/$(APP)-$$os-$$arch$$ext; \
-		printf "  -> building %-16s\n" "$$os/$$arch"; \
-		GOOS=$$os GOARCH=$$arch CGO_ENABLED=0 \
-			go build -ldflags "$(LDFLAGS)" -o $$bin $(PKG) || exit 1; \
-	done
-	@$(MAKE) --no-print-directory archives
-	@echo ""; echo "Release artifacts:"; ls -lh $(DIST)
-
-## archives: bundle each binary with the timetable (tar.gz on unix, zip on windows)
-.PHONY: archives
-archives:
-	@for target in $(TARGETS); do \
-		os=$${target%/*}; \
-		arch=$${target#*/}; \
-		ext=""; \
-		[ $$os = windows ] && ext=".exe"; \
 		bin=$(APP)-$$os-$$arch$$ext; \
 		stem=$(APP)-$(VERSION)-$$os-$$arch; \
+		printf "  -> building %-16s\n" "$$os/$$arch"; \
+		GOOS=$$os GOARCH=$$arch CGO_ENABLED=0 \
+			go build -ldflags "$(LDFLAGS)" -o $(DIST)/$$bin $(PKG) || exit 1; \
 		rm -rf $(DIST)/$$stem; mkdir -p $(DIST)/$$stem; \
+		./scripts/fetch-tools.sh $$os $$arch $(DIST)/$$stem || exit 1; \
 		cp $(DIST)/$$bin $(DIST)/$$stem/; \
 		cp dq-timetable.json $(DIST)/$$stem/; \
 		if [ $$os = windows ]; then \
@@ -92,6 +80,7 @@ archives:
 		fi; \
 		rm -rf $(DIST)/$$stem; \
 	done
+	@echo ""; echo "Release artifacts:"; ls -lh $(DIST)
 
 ## docker: build the container image
 .PHONY: docker

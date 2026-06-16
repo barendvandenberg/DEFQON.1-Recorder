@@ -65,6 +65,7 @@ internal/
   recorder/          yt-dlp process manager, stalled monitor, shutdown
   controller/        Channel-check & stalled-monitor scheduling loops
   status/            Per-channel stream state (online/offline) registry
+  tools/             Bundled yt-dlp / ffmpeg discovery (bundled dir → PATH)
   tui/               tview dashboard (tables, logs, status) + channel logger
   util/              Shared helpers (formatting, sanitization, timezone)
 ```
@@ -76,7 +77,11 @@ registry feeding the TUI and the `timetable` enriching artist/ends-in columns.
 
 ### Runtime prerequisites
 
-The binary needs two external tools to capture and convert audio:
+**Prebuilt releases bundle yt-dlp and FFmpeg** — extract and run, nothing else to install.
+
+If you build from source (or want to use your own copies), the app looks for
+`yt-dlp` and `ffmpeg` next to its own binary (or in `TOOLS_DIR`) first, then
+falls back to your `PATH`. Install them only if you are not using a bundled release:
 
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — stream downloading
 - [FFmpeg](https://ffmpeg.org/) — audio conversion (MP3)
@@ -100,8 +105,8 @@ cd defqon-recorder-*-windows-amd64
 .\defqon-recorder-windows-amd64.exe
 ```
 
-Each archive bundles the binary **and** `dq-timetable.json`, so it runs out of
-the box.
+Each archive is fully self-contained: it bundles the binary, **yt-dlp, FFmpeg**
+and `dq-timetable.json`, so it runs out of the box with zero external installs.
 
 ### Option B — Build from source
 
@@ -126,7 +131,8 @@ Build static binaries for all platforms and bundle distributable archives:
 make release
 ```
 
-This produces the following in `dist/` (CGO disabled → fully static):
+This produces the following in `dist/` (CGO disabled → fully static). Archives
+bundle yt-dlp + FFmpeg so they are self-contained:
 
 | Platform            | Binary                              | Archive     |
 |---------------------|-------------------------------------|-------------|
@@ -178,6 +184,7 @@ The application works with sensible defaults — no configuration required.
 |------------------------|----------------------------------------------|---------------------|
 | `RECORDINGS_DIR`       | Directory to save recordings                 | `./recordings`      |
 | `TIMETABLE_PATH`       | Path to the timetable JSON                   | `dq-timetable.json` |
+| `TOOLS_DIR`            | Directory with bundled yt-dlp / ffmpeg       | exe directory       |
 | `CHECK_INTERVAL_MS`    | Stream check interval (ms)                   | `60000`             |
 | `TUI_UPDATE_INTERVAL_MS` | UI refresh rate (ms)                        | `2000`              |
 
