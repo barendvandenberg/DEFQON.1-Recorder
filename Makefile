@@ -85,7 +85,7 @@ release:
 ## docker: build the container image
 .PHONY: docker
 docker:
-	docker build -t $(APP):$(VERSION) .
+	docker build -t $(APP):$(VERSION) -t $(APP):latest .
 
 .PHONY: help
 help:

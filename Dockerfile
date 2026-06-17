@@ -20,8 +20,7 @@ RUN CGO_ENABLED=0 go build \
 FROM alpine:3.20
 
 # yt-dlp and FFmpeg are required at runtime to download/convert streams.
-RUN apk add --no-cache ca-certificates ffmpeg \
-    && pip3 install --no-cache-dir --break-system-packages yt-dlp \
+RUN apk add --no-cache ca-certificates ffmpeg yt-dlp \
     && addgroup -S app && adduser -S -G app app
 
 WORKDIR /app

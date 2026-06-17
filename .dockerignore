@@ -1,0 +1,30 @@
+# Build artifacts & toolchain output
+/dist/
+/bin/
+/defqon-recorder
+
+# Runtime data
+/recordings/
+*.mp3
+*.log
+
+# VCS & metadata
+/.git/
+/.gitignore
+/.dockerignore
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Docs & screenshots (not needed in image)
+*.png
+README.md
+CHANGELOG.md
+LICENSE
+
+# Legacy
+node_modules/
+bun.lockb
