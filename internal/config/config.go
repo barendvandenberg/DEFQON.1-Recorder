@@ -23,10 +23,20 @@ func Default() Config {
 	return Config{
 		APIBaseURL: "https://apicdn.mixlr.com/v3/channel_view/",
 		Channels: []string{
-			"defqon-1-magenta", "defqon1purple", "defqon1white", "defqon-1-brown",
-			"defqon1pink", "defqon1blue", "defqon1indigo", "defqon1yellow",
-			"defqon1orange", "defqon1silver", "defqon1green", "defqon1gold",
-			"defqon1black", "defqon1uv",
+			"defqon-1-magenta", // DQ.1 Magenta
+			"defqon1purple",    // DQ.1 Purple
+			"defqon1white",     // DQ.1 White
+			"defqon-1-brown",   // DQ.1 Brown
+			"defqon1pink",      // DQ.1 Pink
+			"defqon1blue",      // DQ.1 Blue
+			"defqon1indigo",    // DQ.1 Indigo
+			"defqon1yellow",    // DQ.1 Yellow
+			"defqon1orange",    // DQ.1 Orange
+			"defqon1silver",    // DQ.1 Silver
+			"defqon1green",     // DQ.1 Green
+			"defqon1gold",      // DQ.1 Gold
+			"defqon1black",     // DQ.1 Black
+			"defqon1uv",        // DQ.1 UV
 		},
 		RecordingsDir:        envOr("RECORDINGS_DIR", "recordings"),
 		TimetablePath:        envOr("TIMETABLE_PATH", "dq-timetable.json"),
