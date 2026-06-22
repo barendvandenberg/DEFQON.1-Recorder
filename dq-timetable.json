@@ -1,10 +1,15 @@
 [
 	{
 		"stage": "RED",
-		"channel": "1387805277692104774",
+		"channel": "1517594504423674157",
 		"emoji": "<:dq_red:988093668219031603>",
 		"url": "https://www.youtube.com/@qdance/live",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Friday", "name": "Villain & DV8" },
+			{ "day": "Saturday", "name": "Villain & DV8" },
+			{ "day": "Sunday", "name": "Villain" }
+		],
 		"sets": [
 			[ 2026, 6, 26, 13, 0, "The Opening Ceremony with Outsiders" ],
 			[ 2026, 6, 26, 14, 0, "Jay Reeve & Ecstatic ft Synergy" ],
@@ -12,7 +17,7 @@
 			[ 2026, 6, 26, 16, 0, "The Straikerz \"All On Red\"" ],
 			[ 2026, 6, 26, 16, 30, "Da Tweekaz" ],
 			[ 2026, 6, 26, 17, 15, "Rejecta & Adaro" ],
-			[ 2026, 6, 26, 18, 0, "REDRACE WINNER" ],
+			[ 2026, 6, 26, 18, 0, "Testarossa" ],
 			[ 2026, 6, 26, 18, 30, "Warface x Restricted" ],
 			[ 2026, 6, 26, 19, 15, "Darren Styles" ],
 			[ 2026, 6, 26, 20, 0, "Sound Rush" ],
@@ -42,18 +47,20 @@
 			[ 2026, 6, 28, 22, 0, "4444 of a Kind" ],
 			[ 2026, 6, 28, 22, 45, "The Closing Ritual" ],
 				[ 2026, 6, 28, 23, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://www.youtube.com/@qdance/live>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **Villain & DV8 (Friday), Villain & DV8 (Saturday), Villain (Sunday)**"
-		}
+		]
 	},
 	{
 		"stage": "BLUE",
-		"channel": "1387348870295457852",
+		"channel": "1517594520471081121",
 		"emoji": "<:dq_blue:988094952280055808>",
 		"url": "https://defqon1blue.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Thursday", "name": "Villain" },
+			{ "day": "Friday", "name": "Livid" },
+			{ "day": "Saturday", "name": "Livid" },
+			{ "day": "Sunday", "name": "Livid  & Nolz" }
+		],
 		"sets": [
 			[ 2026, 6, 25, 18, 0, "D-Sturb" ],
 			[ 2026, 6, 25, 19, 0, "DJ Isaac" ],
@@ -104,18 +111,20 @@
 			[ 2026, 6, 28, 20, 30, "Krowdexx" ],
 			[ 2026, 6, 28, 21, 15, "So Juice & Fraw & Exproz" ],
 				[ 2026, 6, 28, 22, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1blue.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **Villain (Thursday), Livid (Friday), Livid (Saturday), Livid  & Nolz (Sunday)**"
-		}
+		]
 	},
 	{
 		"stage": "BLACK",
-		"channel": "1387348902914818170",
+		"channel": "1517594537755934904",
 		"emoji": "<:dq_black:988094951038537778>",
 		"url": "https://defqon1black.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Thursday", "name": "Da Mouth of Madness" },
+			{ "day": "Friday", "name": "Nolz & Robs" },
+			{ "day": "Saturday", "name": "Da Mouth of Madness & Tha Watcher" },
+			{ "day": "Sunday", "name": "Alee" }
+		],
 		"sets": [
 			[ 2026, 6, 25, 18, 0, "Miss K8" ],
 			[ 2026, 6, 25, 19, 0, "Evil Activities" ],
@@ -160,18 +169,19 @@
 			[ 2026, 6, 28, 19, 0, "Dimitri K & Deadly Guns" ],
 			[ 2026, 6, 28, 20, 0, "Lil Texas & Dr Donk" ],
 				[ 2026, 6, 28, 21, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1black.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **Da Mouth of Madness (Thursday), Nolz & Robs (Friday), Da Mouth of Madness & Tha Watcher (Saturday), Alee (Sunday)**"
-		}
+		]
 	},
 	{
 		"stage": "UV",
-		"channel": "1387348921256382517",
+		"channel": "1517594816882540714",
 		"emoji": "<:dq_uv:988094948199006298>",
 		"url": "https://defqon1uv.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Friday", "name": "DL & Synergy" },
+			{ "day": "Saturday", "name": "DL & Synergy" },
+			{ "day": "Sunday", "name": "Da Syndrome & Boogshe" }
+		],
 		"sets": [
 			[ 2026, 6, 26, 11, 30, "This is Sefa" ],
 			[ 2026, 6, 26, 12, 30, "Anamorphic" ],
@@ -211,18 +221,20 @@
 			[ 2026, 6, 28, 22, 0, "Unicorn on K & Opgekonkerd presents Rainbow Colors" ],
 			[ 2026, 6, 28, 22, 30, "Unicorn on K" ],
 				[ 2026, 6, 28, 23, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1uv.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **DL & Synergy (Friday), DL & Synergy (Saturday), Da Syndrome & Boogshe (Sunday)**"
-		}
+		]
 	},
 	{
 		"stage": "MAGENTA",
-		"channel": "1387348935785582602",
+		"channel": "1517594833500246159",
 		"emoji": "<:dq_magenta:988094945057452203>",
 		"url": "https://defqon-1-magenta.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Thursday", "name": "Synergy" },
+			{ "day": "Friday", "name": "Da Syndrome" },
+			{ "day": "Saturday", "name": "Ruffian" },
+			{ "day": "Sunday", "name": "DV8 & DL" }
+		],
 		"sets": [
 			[ 2026, 6, 25, 18, 0, "Andy SVGE" ],
 			[ 2026, 6, 25, 19, 30, "LARSTIG & GASDROP" ],
@@ -272,18 +284,18 @@
 			[ 2026, 6, 28, 17, 15, "Psyko Punkz" ],
 			[ 2026, 6, 28, 18, 0, "Josh & Wesz" ],
 				[ 2026, 6, 28, 19, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon-1-magenta.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **Synergy (Thursday), Da Syndrome (Friday), Ruffian (Saturday), DV8 & DL (Sunday)**"
-		}
+		]
 	},
 	{
 		"stage": "INDIGO",
-		"channel": "1387348951346450432",
+		"channel": "1517594851829485700",
 		"emoji": "<:dq_indigo:988094943790792724>",
 		"url": "https://defqon1indigo.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Thursday", "name": "Synergy & Flo" },
+			{ "day": "Saturday", "name": "Flo" }
+		],
 		"sets": [
 			[ 2026, 6, 25, 18, 0, "Cryex" ],
 			[ 2026, 6, 25, 18, 45, "Deluzion" ],
@@ -307,18 +319,19 @@
 			[ 2026, 6, 27, 20, 45, "Dark Entities" ],
 			[ 2026, 6, 27, 21, 30, "Spoontechnicians" ],
 				[ 2026, 6, 27, 23, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1indigo.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **Synergy & Flo (Thursday), Flo (Saturday)**"
-		}
+		]
 	},
 	{
 		"stage": "GOLD",
-		"channel": "1387348963191164939",
+		"channel": "1517594871731454022",
 		"emoji": "<:dq_gold:988094953903231036>",
 		"url": "https://defqon1gold.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Friday", "name": "Ruffian" },
+			{ "day": "Saturday", "name": "Alee & Da Syndrome" },
+			{ "day": "Sunday", "name": "Da Mouth of Madness" }
+		],
 		"sets": [
 			[ 2026, 6, 26, 12, 0, "Miss Monica" ],
 			[ 2026, 6, 26, 13, 0, "Party Animals vs Flamman & Abraxas" ],
@@ -354,21 +367,22 @@
 			[ 2026, 6, 28, 18, 30, "Reeza & Juno B - House of Madness" ],
 			[ 2026, 6, 28, 19, 15, "Steve-D" ],
 				[ 2026, 6, 28, 20, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1gold.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **Ruffian (Friday), Alee & Da Syndrome (Saturday), Da Mouth of Madness (Sunday)**"
-		}
+		]
 	},
 	{
 		"stage": "YELLOW",
-		"channel": "1387348977573298186",
+		"channel": "1517594895005515826",
 		"emoji": "<:dq_yellow:988094949780246548>",
 		"url": "https://defqon1yellow.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Friday", "name": "Robs & Flo" },
+			{ "day": "Saturday", "name": "Robs" },
+			{ "day": "Sunday", "name": "RG" }
+		],
 		"sets": [
 			[ 2026, 6, 26, 11, 0, "Vandal" ],
-			[ 2026, 6, 26, 12, 0, "Cryogenic" ],
+			[ 2026, 6, 26, 12, 0, "Cryogenic & Spiady" ],
 			[ 2026, 6, 26, 13, 0, "Aradia" ],
 			[ 2026, 6, 26, 13, 45, "Double Trouble" ],
 			[ 2026, 6, 26, 14, 30, "Doris" ],
@@ -411,18 +425,16 @@
 			[ 2026, 6, 28, 18, 30, "Soulblast" ],
 			[ 2026, 6, 28, 19, 15, "Chaotic Hostility" ],
 				[ 2026, 6, 28, 20, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1yellow.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **Robs & Flo (Friday), Robs (Saturday), RG (Sunday)**"
-		}
+		]
 	},
 	{
 		"stage": "GREEN",
-		"channel": "1387348989808082995",
+		"channel": "1517594933102514216",
 		"emoji": "<:dq_green:1387365970779050064>",
 		"url": "https://defqon1green.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+		],
 		"sets": [
 			[ 2026, 6, 26, 11, 0, "Stanne" ],
 			[ 2026, 6, 26, 12, 0, "Activator (a.k.a T78) & ASYS" ],
@@ -447,17 +459,17 @@
 			[ 2026, 6, 28, 20, 30, "Samuel Moriero" ],
 			[ 2026, 6, 28, 21, 45, "elMefti" ],
 				[ 2026, 6, 28, 23, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1green.mixlr.com/embed>**"
-		}
+		]
 	},
 	{
 		"stage": "PINK",
-		"channel": "1387349000184922172",
+		"channel": "1517594949439328437",
 		"emoji": "<:dq_pink:1387365972502908929>",
 		"url": "https://defqon1pink.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Sunday", "name": "MCHUCK" }
+		],
 		"sets": [
 			[ 2026, 6, 28, 11, 0, "Fight Switch" ],
 			[ 2026, 6, 28, 12, 0, "Sins of Pandora" ],
@@ -469,23 +481,24 @@
 			[ 2026, 6, 28, 18, 0, "Murdock" ],
 			[ 2026, 6, 28, 19, 0, "Redpill" ],
 				[ 2026, 6, 28, 20, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1pink.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **MCHUCK**"
-		}
+		]
 	},
 	{
 		"stage": "PURPLE",
-		"channel": "1387349012910313584",
+		"channel": "1517594970360516650",
 		"emoji": "<:dq_purple:988094360006574103>",
 		"url": "https://defqon1purple.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Friday", "name": "Barricade" },
+			{ "day": "Saturday", "name": "Activate" },
+			{ "day": "Sunday", "name": "Activate" }
+		],
 		"sets": [
 			[ 2026, 6, 26, 12, 0, "Plus+" ],
-			[ 2026, 6, 26, 13, 0, "RED Race #4" ],
+			[ 2026, 6, 26, 13, 0, "Essive" ],
 			[ 2026, 6, 26, 13, 45, "ARK8" ],
-			[ 2026, 6, 26, 14, 30, "RED Race #2" ],
+			[ 2026, 6, 26, 14, 30, "Beat Conductors" ],
 			[ 2026, 6, 26, 15, 15, "Simox" ],
 			[ 2026, 6, 26, 16, 0, "Distress" ],
 			[ 2026, 6, 26, 16, 45, "Nocturnal" ],
@@ -498,7 +511,7 @@
 				[ 2026, 6, 26, 22, 0 ],
 			[ 2026, 6, 27, 11, 0, "Phandelic" ],
 			[ 2026, 6, 27, 12, 0, "Kaki" ],
-			[ 2026, 6, 27, 12, 45, "RED Race #3" ],
+			[ 2026, 6, 27, 12, 45, "Antergy" ],
 			[ 2026, 6, 27, 13, 30, "Harder Class Hardstyle Contest" ],
 			[ 2026, 6, 27, 14, 15, "Harde Kwark" ],
 			[ 2026, 6, 27, 15, 0, "Xriminals" ],
@@ -521,18 +534,17 @@
 			[ 2026, 6, 28, 18, 30, "MT" ],
 			[ 2026, 6, 28, 19, 15, "Svenergy" ],
 				[ 2026, 6, 28, 20, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1purple.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **Barricade (Friday), Activate (Saturday), Activate (Sunday)**"
-		}
+		]
 	},
 	{
 		"stage": "ORANGE",
-		"channel": "1387349023354261515",
+		"channel": "1517594991520907284",
 		"emoji": "<:qdance:700038070594043986>",
 		"url": "https://defqon1orange.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Friday", "name": "Geck-o" }
+		],
 		"sets": [
 			[ 2026, 6, 26, 11, 0, "DJ Thera pres. Tranceparency" ],
 			[ 2026, 6, 26, 12, 0, "Marcel Woods" ],
@@ -545,18 +557,17 @@
 			[ 2026, 6, 26, 20, 0, "Argy" ],
 			[ 2026, 6, 26, 21, 0, "Steve Hill & Francesco Zeta" ],
 				[ 2026, 6, 26, 22, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1orange.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **Geck-o**"
-		}
+		]
 	},
 	{
 		"stage": "SILVER",
-		"channel": "1387349050478690356",
+		"channel": "1517595003617022013",
 		"emoji": "<:dq_silver:988094946756141156>",
 		"url": "https://defqon1silver.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+			{ "day": "Saturday", "name": "JASE" }
+		],
 		"sets": [
 			[ 2026, 6, 27, 11, 0, "Folie à Deux" ],
 			[ 2026, 6, 27, 12, 0, "Chaos Project & Furyan" ],
@@ -570,27 +581,22 @@
 			[ 2026, 6, 27, 20, 0, "Dolphin & The DJ Producer" ],
 			[ 2026, 6, 27, 21, 0, "Noisekick" ],
 				[ 2026, 6, 27, 22, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon1silver.mixlr.com/embed>**",
-			"^\\.(mc|mcs)$":":microphone2: The MC(s) on this stage: **JASE**"
-		}
+		]
 	},
 	{
 		"stage": "BROWN",
-		"channel": "1387799382379729036",
+		"channel": "1517595012920250411",
 		"emoji": "<:dq_brown:1387377060288401408>",
 		"url": "https://defqon-1-brown.mixlr.com/embed",
 		"streamdelay":0,
+		"mcs": [
+		],
 		"sets": [
 			[ 2026, 6, 25, 18, 0, "Ransom" ],
 			[ 2026, 6, 25, 19, 30, "Ricardo Moreno" ],
 			[ 2026, 6, 25, 21, 0, "Plug 'N Play" ],
 			[ 2026, 6, 25, 22, 0, "The Raver" ],
 				[ 2026, 6, 25, 23, 0 ]
-		],
-		"responses": {
-			"^\\.(url|stream|link|watch)$":":tv: Tune in to the livestream here: **<https://defqon-1-brown.mixlr.com/embed>**"
-		}
+		]
 	}
 ]
