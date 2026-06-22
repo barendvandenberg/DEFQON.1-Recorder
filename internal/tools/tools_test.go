@@ -23,6 +23,9 @@ func TestResolveBundled(t *testing.T) {
 	if p.YtDLP != yt {
 		t.Errorf("YtDLP = %q, want %q", p.YtDLP, yt)
 	}
+	if p.FFmpeg != ff {
+		t.Errorf("FFmpeg = %q, want %q", p.FFmpeg, ff)
+	}
 	if p.FFmpegDir != dir {
 		t.Errorf("FFmpegDir = %q, want %q", p.FFmpegDir, dir)
 	}
@@ -32,11 +35,16 @@ func TestResolveFallbackToPath(t *testing.T) {
 	// Empty dir -> PATH fallback, ffmpeg dir empty.
 	p := Resolve("")
 	want := "yt-dlp"
+	ffwant := "ffmpeg"
 	if runtime.GOOS == "windows" {
 		want = "yt-dlp.exe"
+		ffwant = "ffmpeg.exe"
 	}
 	if p.YtDLP != want {
 		t.Errorf("YtDLP = %q, want %q", p.YtDLP, want)
+	}
+	if p.FFmpeg != ffwant {
+		t.Errorf("FFmpeg = %q, want %q", p.FFmpeg, ffwant)
 	}
 	if p.FFmpegDir != "" {
 		t.Errorf("FFmpegDir = %q, want empty", p.FFmpegDir)
@@ -46,6 +54,9 @@ func TestResolveFallbackToPath(t *testing.T) {
 	p = Resolve(t.TempDir())
 	if p.YtDLP != want {
 		t.Errorf("YtDLP = %q, want %q", p.YtDLP, want)
+	}
+	if p.FFmpeg != ffwant {
+		t.Errorf("FFmpeg = %q, want %q", p.FFmpeg, ffwant)
 	}
 	if p.FFmpegDir != "" {
 		t.Errorf("FFmpegDir = %q, want empty", p.FFmpegDir)

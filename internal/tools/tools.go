@@ -11,6 +11,9 @@ type Paths struct {
 	// YtDLP is the yt-dlp executable to run. Defaults to "yt-dlp" (PATH lookup)
 	// when no bundled copy is found.
 	YtDLP string
+	// FFmpeg is the ffmpeg executable used for live MP3 transcoding. Defaults
+	// to "ffmpeg" (PATH lookup) when no bundled copy is found.
+	FFmpeg string
 	// FFmpegDir is a directory passed to yt-dlp via --ffmpeg-location, or empty
 	// to let yt-dlp fall back to PATH.
 	FFmpegDir string
@@ -20,14 +23,18 @@ type Paths struct {
 // directory next to the application executable). Missing tools fall back to
 // PATH so the app keeps working with system-installed copies.
 func Resolve(dir string) Paths {
-	p := Paths{YtDLP: ytDLPName()}
+	p := Paths{
+		YtDLP:   ytDLPName(),
+		FFmpeg:  ffmpegName(),
+	}
 	if dir == "" {
 		return p
 	}
 	if exe := filepath.Join(dir, ytDLPName()); isExecutable(exe) {
 		p.YtDLP = exe
 	}
-	if isExecutable(filepath.Join(dir, ffmpegName())) {
+	if exe := filepath.Join(dir, ffmpegName()); isExecutable(exe) {
+		p.FFmpeg = exe
 		p.FFmpegDir = dir
 	}
 	return p
