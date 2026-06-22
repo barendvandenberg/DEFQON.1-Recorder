@@ -37,7 +37,6 @@ func Default() Config {
 			"defqon1gold",      // DQ.1 Gold
 			"defqon1black",     // DQ.1 Black
 			"defqon1uv",        // DQ.1 UV
-			"radio-luster",     // TEST
 		},
 		RecordingsDir:        envOr("RECORDINGS_DIR", "recordings"),
 		TimetablePath:        envOr("TIMETABLE_PATH", "dq-timetable.json"),
