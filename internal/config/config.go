@@ -12,9 +12,11 @@ import (
 type Config struct {
 	APIBaseURL           string
 	Channels             []string
+	RecordingBlacklist   []string
 	RecordingsDir        string
 	TimetablePath        string
 	ToolsDir             string
+	PreferencesPath      string
 	CheckInterval        time.Duration
 	StalledCheckInterval time.Duration
 	StalledTimeout       time.Duration
@@ -43,9 +45,11 @@ func Default() Config {
 	return Config{
 		APIBaseURL:           "https://apicdn.mixlr.com/v3/channel_view/",
 		Channels:             channels,
+		RecordingBlacklist:   parseCSV(os.Getenv("RECORDING_BLACKLIST")),
 		RecordingsDir:        envOr("RECORDINGS_DIR", "recordings"),
 		TimetablePath:        envOr("TIMETABLE_PATH", "dq-timetable.json"),
 		ToolsDir:             envOr("TOOLS_DIR", exeDir()),
+		PreferencesPath:      envOr("PREFERENCES_PATH", "recorder.ini"),
 		CheckInterval:        envDurationMSOr("CHECK_INTERVAL_MS", 60_000*time.Millisecond),
 		StalledCheckInterval: 30 * time.Second,
 		StalledTimeout:       60 * time.Second,
@@ -62,6 +66,17 @@ func appendEnvChannels(channels []string, key string) []string {
 		channels = append(channels, channel)
 	}
 	return channels
+}
+
+// parseCSV splits a comma-separated env value into trimmed, non-empty entries.
+func parseCSV(env string) []string {
+	var out []string
+	for _, raw := range strings.Split(env, ",") {
+		if s := strings.TrimSpace(raw); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func envOr(key, def string) string {

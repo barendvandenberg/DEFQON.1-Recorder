@@ -46,3 +46,20 @@ func TestRegistryOrderAndSet(t *testing.T) {
 		}
 	}
 }
+
+func TestRegistryStreamLookup(t *testing.T) {
+	r := New([]string{"a", "b"})
+	r.Set("a", "ALPHA", true, 7, "https://listen.mixlr.com/a")
+
+	got, ok := r.Stream("a")
+	if !ok {
+		t.Fatal("expected to find known channel 'a'")
+	}
+	if got.Stage != "ALPHA" || !got.Online || got.ListenerCount != 7 {
+		t.Fatalf("unexpected stream snapshot: %+v", got)
+	}
+
+	if _, ok := r.Stream("missing"); ok {
+		t.Fatal("Stream should report ok=false for an unknown channel")
+	}
+}

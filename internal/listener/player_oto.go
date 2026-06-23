@@ -1,3 +1,5 @@
+//go:build !linux
+
 package listener
 
 import (
@@ -5,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os/exec"
 	"strings"
 	"sync"
@@ -31,19 +32,6 @@ const (
 	// stopTimeout bounds how long Stop waits for ffmpeg to exit after being killed.
 	stopTimeout = 2 * time.Second
 )
-
-type State string
-
-const (
-	StateStopped  State = "Stopped"
-	StateStarting State = "Starting"
-	StatePlaying  State = "Playing"
-)
-
-type Snapshot struct {
-	State State
-	Stage string
-}
 
 // Player streams a live URL through ffmpeg into an oto player so audio plays
 // inside the TUI without opening a browser. At most one session runs at a time.
@@ -338,18 +326,4 @@ func (s *session) exitError() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.exitErr
-}
-
-func validateURL(rawURL string) error {
-	parsed, err := url.Parse(rawURL)
-	if err != nil {
-		return err
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return fmt.Errorf("unsupported URL scheme %q", parsed.Scheme)
-	}
-	if parsed.Host == "" {
-		return errors.New("stream URL is missing a host")
-	}
-	return nil
 }

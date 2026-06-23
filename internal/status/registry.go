@@ -70,3 +70,15 @@ func (r *Registry) All() []Stream {
 	}
 	return out
 }
+
+// Stream returns a snapshot of a single channel. ok is false if the channel
+// is unknown to the registry.
+func (r *Registry) Stream(channel string) (Stream, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	s, ok := r.items[channel]
+	if !ok {
+		return Stream{}, false
+	}
+	return *s, true
+}

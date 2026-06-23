@@ -12,10 +12,12 @@ import (
 	"github.com/revunix/defqon1-recorder/internal/config"
 	"github.com/revunix/defqon1-recorder/internal/controller"
 	"github.com/revunix/defqon1-recorder/internal/mixlr"
+	"github.com/revunix/defqon1-recorder/internal/prefs"
 	"github.com/revunix/defqon1-recorder/internal/recorder"
 	"github.com/revunix/defqon1-recorder/internal/status"
 	"github.com/revunix/defqon1-recorder/internal/timetable"
 	"github.com/revunix/defqon1-recorder/internal/tui"
+	"github.com/revunix/defqon1-recorder/internal/util"
 )
 
 // version is set at build time via -ldflags "-X main.version=...".
@@ -44,14 +46,41 @@ func main() {
 	}
 
 	client := mixlr.New(cfg.APIBaseURL)
-	rec := recorder.New(cfg.RecordingsDir, cfg.StalledTimeout, cfg.ToolsDir, logger)
+	rec := recorder.New(cfg.RecordingsDir, cfg.StalledTimeout, cfg.ToolsDir, util.SystemUser(), logger)
 	reg := status.New(cfg.Channels)
-	ctrl := controller.New(client, rec, tt, reg, logger, cfg.Channels)
+
+	// Resolve which channels may be recorded: start from all-enabled, apply the
+	// RECORDING_BLACKLIST defaults, then let the persisted INI win so the user's
+	// last toggles survive a restart.
+	store := prefs.New(cfg.PreferencesPath)
+	saved, err := store.Load()
+	if err != nil {
+		logger.Warn(fmt.Sprintf("preferences: %s; starting with defaults", err))
+		saved = map[string]bool{}
+	}
+	enabled := make(map[string]bool, len(cfg.Channels))
+	for _, ch := range cfg.Channels {
+		enabled[ch] = true
+	}
+	for _, ch := range cfg.RecordingBlacklist {
+		enabled[ch] = false
+	}
+	for ch, on := range saved {
+		enabled[ch] = on
+	}
+	// Seed a preferences file on first run so the user has a visible template.
+	if len(saved) == 0 {
+		if err := store.SaveAll(enabled); err != nil {
+			logger.Warn(fmt.Sprintf("preferences: cannot write %s: %s", cfg.PreferencesPath, err))
+		}
+	}
+
+	ctrl := controller.New(client, rec, tt, reg, logger, cfg.Channels, enabled, store)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ui := tui.New(cfg, rec, tt, reg, logCh, logger)
+	ui := tui.New(cfg, rec, ctrl, tt, reg, logCh, logger)
 
 	go ctrl.Run(ctx, cfg.CheckInterval, cfg.StalledCheckInterval)
 	go ui.RunRefresh(ctx)

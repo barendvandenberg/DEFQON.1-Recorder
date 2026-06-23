@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"math"
+	"os/user"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,6 +35,39 @@ func Sanitize(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// Alnum keeps only ASCII letters and digits. Useful for building scene-style
+// file-name segments where no separators or special characters are allowed
+// inside a field.
+func Alnum(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+// SystemUser returns the current OS user name, stripped of any Windows domain
+// prefix (e.g. "DOMAIN\\user" -> "user") and reduced to alphanumerics. It falls
+// back to "anonymous" when the user cannot be determined.
+func SystemUser() string {
+	u, err := user.Current()
+	if err != nil || u.Username == "" {
+		return "anonymous"
+	}
+	name := u.Username
+	if i := strings.LastIndex(name, `\`); i >= 0 {
+		name = name[i+1:]
+	}
+	name = Alnum(name)
+	if name == "" {
+		return "anonymous"
+	}
+	return name
 }
 
 func FormatBytes(bytes int64) string {

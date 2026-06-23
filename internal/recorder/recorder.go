@@ -15,6 +15,7 @@ import (
 
 	"github.com/revunix/defqon1-recorder/internal/logging"
 	"github.com/revunix/defqon1-recorder/internal/tools"
+	"github.com/revunix/defqon1-recorder/internal/util"
 )
 
 // mp3Bitrate is the constant bitrate used for the live MP3 transcoding.
@@ -36,12 +37,26 @@ type recording struct {
 	lastSize  int64
 	lastCheck time.Time
 	mu        sync.Mutex
+	stopping  bool // set when Stop/kill is intentional; suppresses exit diagnostics
+}
+
+func (r *recording) markStopping() {
+	r.mu.Lock()
+	r.stopping = true
+	r.mu.Unlock()
+}
+
+func (r *recording) isStopping() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.stopping
 }
 
 type Manager struct {
 	dir          string
 	stalledAfter time.Duration
 	paths        tools.Paths
+	group        string
 	log          logging.Logger
 
 	mu     sync.RWMutex
@@ -51,7 +66,7 @@ type Manager struct {
 	stopped int32
 }
 
-func New(dir string, stalledAfter time.Duration, toolsDir string, log logging.Logger) *Manager {
+func New(dir string, stalledAfter time.Duration, toolsDir string, group string, log logging.Logger) *Manager {
 	if log == nil {
 		log = logging.Noop{}
 	}
@@ -61,6 +76,7 @@ func New(dir string, stalledAfter time.Duration, toolsDir string, log logging.Lo
 		dir:          dir,
 		stalledAfter: stalledAfter,
 		paths:        paths,
+		group:        group,
 		log:          log,
 		active:       make(map[string]*recording),
 	}
@@ -73,6 +89,31 @@ func (m *Manager) IsRecording(stage string) bool {
 	return ok
 }
 
+// sceneReleaseName builds an audio-scene-style release name, e.g.
+// "DEFQON.1.2026.BLUE.20260626.1800.LIVE.MP3-revunix".
+//
+//	DEFQON.1            release title
+//	2026               season (event year)
+//	BLUE                stage
+//	20260626            recording date (UTC)
+//	1800                recording start time (UTC, HHMM) — keeps separate
+//	                    sets on the same stage/date unique
+//	LIVE                source
+//	MP3                 format
+//	-group              release group (current OS user)
+func sceneReleaseName(stage string, t time.Time, group string) string {
+	stg := util.Alnum(stage)
+	if stg == "" {
+		stg = "UNKNOWN"
+	}
+	grp := util.Alnum(group)
+	if grp == "" {
+		grp = "anonymous"
+	}
+	return fmt.Sprintf("DEFQON.1.%d.%s.%s.%s.LIVE.MP3-%s",
+		t.Year(), stg, t.Format("20060102"), t.Format("1504"), grp)
+}
+
 func (m *Manager) Count() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -80,7 +121,7 @@ func (m *Manager) Count() int {
 }
 
 func (m *Manager) Start(stage, streamURL string, listeners int) {
-	fileName := fmt.Sprintf("%s_%s.mp3", stage, time.Now().UTC().Format("2006-01-02T15-04-05.000Z"))
+	fileName := sceneReleaseName(stage, time.Now().UTC(), m.group) + ".mp3"
 	outputPath := filepath.Join(m.dir, fileName)
 
 	// yt-dlp downloads the raw audio stream to stdout; ffmpeg transcodes it to
@@ -191,8 +232,8 @@ func (m *Manager) Start(stage, streamURL string, listeners int) {
 	}
 
 	m.wg.Add(1)
-	go m.watchStderr(stage, "yt-dlp", ytdlpStderr)
-	go m.watchStderr(stage, "ffmpeg", ffmpegStderr)
+	go m.watchStderr(rec, "yt-dlp", ytdlpStderr)
+	go m.watchStderr(rec, "ffmpeg", ffmpegStderr)
 	go m.run(stage, rec, pipeR, pipeW, outFile, ffmpegStdout)
 }
 
@@ -233,15 +274,21 @@ func (m *Manager) run(stage string, rec *recording, pipeR, pipeW, outFile *os.Fi
 	pipeR.Close()
 
 	if atomic.LoadInt32(&m.stopped) == 0 {
-		if ytdlpErr != nil {
-			if ee, ok := ytdlpErr.(*exec.ExitError); ok {
-				m.log.Info(fmt.Sprintf("[%s] yt-dlp exited (code %d).", stage, ee.ExitCode()))
-			} else {
-				m.log.Error(fmt.Sprintf("[%s] yt-dlp: %s", stage, ytdlpErr))
+		// Process exit diagnostics only matter when the recording was not
+		// stopped on purpose: an intentional Stop expects yt-dlp/ffmpeg to be
+		// interrupted, so logging "Interrupted by user" / non-zero exits would
+		// just look like errors.
+		if !rec.isStopping() {
+			if ytdlpErr != nil {
+				if ee, ok := ytdlpErr.(*exec.ExitError); ok {
+					m.log.Info(fmt.Sprintf("[%s] yt-dlp exited (code %d).", stage, ee.ExitCode()))
+				} else {
+					m.log.Error(fmt.Sprintf("[%s] yt-dlp: %s", stage, ytdlpErr))
+				}
 			}
-		}
-		if ffmpegErr != nil {
-			m.log.Error(fmt.Sprintf("[%s] ffmpeg: %s", stage, ffmpegErr))
+			if ffmpegErr != nil {
+				m.log.Error(fmt.Sprintf("[%s] ffmpeg: %s", stage, ffmpegErr))
+			}
 		}
 		if info, err := os.Stat(rec.path); err == nil && info.Size() == 0 {
 			_ = os.Remove(rec.path)
@@ -253,14 +300,18 @@ func (m *Manager) run(stage string, rec *recording, pipeR, pipeW, outFile *os.Fi
 	m.remove(stage, rec)
 }
 
-func (m *Manager) watchStderr(stage, source string, r io.Reader) {
+func (m *Manager) watchStderr(rec *recording, source string, r io.Reader) {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.Contains(strings.ToLower(line), "error") {
-			m.log.Error(fmt.Sprintf("[%s] %s: %s", stage, source, line))
+		if !strings.Contains(strings.ToLower(line), "error") {
+			continue
 		}
+		if rec.isStopping() {
+			continue
+		}
+		m.log.Error(fmt.Sprintf("[%s] %s: %s", rec.stage, source, line))
 	}
 }
 
@@ -287,6 +338,7 @@ func (m *Manager) forceKill(stage string) {
 // interrupt asks both processes to shut down gracefully so ffmpeg can finalize
 // a valid MP3 (it flushes and writes the trailer on SIGINT).
 func (r *recording) interrupt() {
+	r.markStopping()
 	if runtime.GOOS == "windows" {
 		// os.Interrupt is not delivered to child processes on Windows. Kill both
 		// tools immediately so quitting the TUI cannot leave a hidden recorder
@@ -304,6 +356,7 @@ func (r *recording) interrupt() {
 
 // kill terminates both processes immediately (used for stalled recovery).
 func (r *recording) kill() {
+	r.markStopping()
 	if r.ytdlp.Process != nil {
 		_ = r.ytdlp.Process.Kill()
 	}

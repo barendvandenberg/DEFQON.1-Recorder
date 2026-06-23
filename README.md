@@ -160,21 +160,50 @@ Mount a volume to persist your recordings.
 
 | Key          | Action                                              |
 |--------------|-----------------------------------------------------|
+| `↑` / `↓`    | Select a stream in the Streams table                |
 | `l`          | Listen to the selected live stream inside the TUI   |
 | `s`          | Stop TUI audio playback                             |
+| `d`          | Toggle recording for the selected channel on/off    |
 | `q`          | Quit (graceful shutdown of all recordings)          |
 | `Ctrl+C`     | Quit (graceful shutdown of all recordings)          |
 | `SIGTERM`    | Graceful shutdown (e.g. `docker stop`)              |
 
+A channel with recording disabled shows **Skip** in the status column: its live
+stream is still detected and can be listened to, but it is never recorded.
+
+Disabled channels are remembered in a preferences file (`recorder.ini` by
+default) so the choice survives a restart — you don't have to toggle them off
+again every time. The file is rewritten automatically whenever you press `d`,
+but it is plain text and can also be edited by hand:
+
+```ini
+[recording]
+defqon1blue=on
+defqon1red=off
+```
+
 ## 📂 File Naming
 
-Recordings are saved as MP3 in the configured directory:
+Recordings are saved as MP3 using an audio-scene-style release name:
 
 ```
-[StageName]_[YYYY-MM-DDThh-mm-ss].mp3
+DEFQON.1.S{YEAR}.{STAGE}.{YYYYMMDD}.{HHMM}.LIVE.MP3-{USER}
 ```
 
-Example: `BLUE_2026-06-26T18-00-00.000Z.mp3`
+Example: `DEFQON.1.S2026.BLUE.20260626.1800.LIVE.MP3-revunix`
+
+| Segment   | Meaning                                            |
+|-----------|----------------------------------------------------|
+| `DEFQON.1`| Release title                                      |
+| `S2026`   | Season (event year)                                |
+| `BLUE`    | Stage                                              |
+| `20260626`| Recording date (UTC)                               |
+| `1800`    | Recording start time (UTC, HHMM) — keeps separate sets unique |
+| `LIVE`    | Source                                             |
+| `MP3`     | Format                                             |
+| `revunix` | Release group (your OS user name)                 |
+
+Special characters in the stage or group are stripped automatically.
 
 ## 🛠️ Configuration
 
@@ -188,6 +217,8 @@ The application works with sensible defaults — no configuration required.
 | `TIMETABLE_PATH`       | Path to the timetable JSON                   | `dq-timetable.json` |
 | `TOOLS_DIR`            | Directory with bundled yt-dlp / ffmpeg       | exe directory       |
 | `TEST_MIXLR_CHANNEL`   | Optional extra Mixlr channel slug for testing | unset               |
+| `RECORDING_BLACKLIST`  | Comma-separated channel slugs that should not be recorded (initial defaults; `recorder.ini` overrides) | unset |
+| `PREFERENCES_PATH`     | Path to the recording-toggle preferences file | `recorder.ini`      |
 | `CHECK_INTERVAL_MS`    | Stream check interval (ms)                   | `60000`             |
 | `TUI_UPDATE_INTERVAL_MS` | UI refresh rate (ms)                        | `2000`              |
 

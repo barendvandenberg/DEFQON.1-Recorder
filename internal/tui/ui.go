@@ -24,6 +24,7 @@ var (
 	colorRecording = tcell.NewHexColor(0x00C853)
 	colorOnline    = tcell.NewHexColor(0xFFD600)
 	colorOffline   = tcell.NewHexColor(0x7A7A7A)
+	colorSkip      = tcell.NewHexColor(0x00BFA5) // teal: recording disabled
 )
 
 // stageColors maps each DEFQON.1 stage to its real signature color.
@@ -52,24 +53,35 @@ func stageColor(stage string) tcell.Color {
 	return tcell.ColorDefault
 }
 
+// RecordingGate decouples the UI from the controller: the UI can query and
+// toggle whether a channel is recorded without depending on the controller
+// package directly.
+type RecordingGate interface {
+	IsEnabled(channel string) bool
+	Toggle(channel string) bool
+}
+
 type UI struct {
-	app       *tview.Application
-	root      *tview.Flex
-	streamTbl *tview.Table
-	ttTable   *tview.Table
-	logView   *tview.TextView
-	statusBar *tview.TextView
-	recorder  *recorder.Manager
-	listener  *listener.Player
-	timetable *timetable.Timetable
-	streams   *status.Registry
-	cfg       config.Config
-	logCh     <-chan LogMessage
+	app         *tview.Application
+	root        *tview.Flex
+	streamTbl   *tview.Table
+	ttTable     *tview.Table
+	logView     *tview.TextView
+	statusBar   *tview.TextView
+	controlsBar *tview.TextView
+	recorder    *recorder.Manager
+	listener    *listener.Player
+	gate        RecordingGate
+	timetable   *timetable.Timetable
+	streams     *status.Registry
+	cfg         config.Config
+	logCh       <-chan LogMessage
 }
 
 func New(
 	cfg config.Config,
 	rec *recorder.Manager,
+	gate RecordingGate,
 	tt *timetable.Timetable,
 	streams *status.Registry,
 	logCh <-chan LogMessage,
@@ -80,6 +92,7 @@ func New(
 		cfg:       cfg,
 		recorder:  rec,
 		listener:  listener.New(cfg.ToolsDir, log),
+		gate:      gate,
 		timetable: tt,
 		streams:   streams,
 		logCh:     logCh,
@@ -103,6 +116,13 @@ func (u *UI) build() {
 		SetTextAlign(tview.AlignLeft)
 	u.statusBar.SetTitle(" Status ").SetBorder(true)
 
+	u.controlsBar = tview.NewTextView().
+		SetDynamicColors(true).
+		SetTextAlign(tview.AlignLeft).
+		SetWrap(false)
+	u.controlsBar.SetText(controlsHelp())
+	u.controlsBar.SetTitle(" Controls ").SetBorder(true)
+
 	top := tview.NewFlex().
 		AddItem(u.streamTbl, 0, 1, false).
 		AddItem(u.ttTable, 0, 1, false)
@@ -110,7 +130,8 @@ func (u *UI) build() {
 	u.root = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(top, 0, 8, false).
 		AddItem(u.logView, 0, 3, false).
-		AddItem(u.statusBar, 0, 1, false)
+		AddItem(u.statusBar, 0, 1, false).
+		AddItem(u.controlsBar, 0, 1, false)
 
 	u.app.SetRoot(u.root, true)
 	u.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -126,9 +147,25 @@ func (u *UI) build() {
 			u.stopListening()
 			return nil
 		}
+		if event.Rune() == 'd' || event.Rune() == 'D' {
+			u.toggleRecordingSelected()
+			return nil
+		}
 		return event
 	})
 	u.app.SetFocus(u.streamTbl)
+}
+
+// controlsHelp renders the keybinding legend shown in the controls bar.
+func controlsHelp() string {
+	key := func(k string) string { return fmt.Sprintf("[yellow::b]%s[-:-:-]", k) }
+	return strings.NewReplacer(
+		"{l}", key("l"),
+		"{s}", key("s"),
+		"{d}", key("d"),
+		"{nav}", key("\u2191/\u2193"),
+		"{q}", key("q"),
+	).Replace("{l} Listen   {s} Stop audio   {d} Toggle recording   {nav} Select stream   {q} Quit")
 }
 
 func newTable(title string, selectable bool) *tview.Table {
@@ -204,9 +241,12 @@ func (u *UI) buildStreamRows() [][]cell {
 	for _, st := range streams {
 		snap, active := byStage[st.Stage]
 
+		disabled := !u.gate.IsEnabled(st.Channel)
 		statusText := "Offline"
 		statusColor := colorOffline
 		switch {
+		case disabled:
+			statusText, statusColor = "Skip", colorSkip
 		case active:
 			statusText, statusColor = "Recording", colorRecording
 		case st.Online:
@@ -317,6 +357,20 @@ func (u *UI) stopListening() {
 	}
 	u.listener.Stop()
 	u.appendLog(LogMessage{Level: logging.LevelInfo, Text: "TUI audio stopped."})
+}
+
+func (u *UI) toggleRecordingSelected() {
+	stream, ok := u.selectedStream()
+	if !ok {
+		u.appendLog(LogMessage{Level: logging.LevelWarn, Text: "No stream selected."})
+		return
+	}
+	enabled := u.gate.Toggle(stream.Channel)
+	state := "enabled"
+	if !enabled {
+		state = "disabled"
+	}
+	u.appendLog(LogMessage{Level: logging.LevelInfo, Text: fmt.Sprintf("[%s] Recording %s.", stream.Stage, state)})
 }
 
 func (u *UI) selectedStream() (status.Stream, bool) {
