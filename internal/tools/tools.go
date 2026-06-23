@@ -24,8 +24,8 @@ type Paths struct {
 // PATH so the app keeps working with system-installed copies.
 func Resolve(dir string) Paths {
 	p := Paths{
-		YtDLP:   ytDLPName(),
-		FFmpeg:  ffmpegName(),
+		YtDLP:  ytDLPName(),
+		FFmpeg: ffmpegName(),
 	}
 	if dir == "" {
 		return p

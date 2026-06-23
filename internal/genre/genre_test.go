@@ -5,8 +5,8 @@ import "testing"
 func TestForStageMapped(t *testing.T) {
 	cases := map[string]string{
 		"UV":      "Euphoric Hardstyle",
-		"uv":      "Euphoric Hardstyle",  // case-insensitive
-		"  blue ": "Rawstyle",             // trimmed
+		"uv":      "Euphoric Hardstyle", // case-insensitive
+		"  blue ": "Rawstyle",           // trimmed
 		"YELLOW":  "Uptempo Hardcore",
 		"BLACK":   "Hardcore",
 		"PINK":    "Drum & Bass",
