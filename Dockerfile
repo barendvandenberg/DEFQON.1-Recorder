@@ -31,6 +31,9 @@ USER app
 
 # Recordings are written here; mount a volume to persist them.
 ENV RECORDINGS_DIR=/app/recordings
+# Preferences are stored in the (writable, mounted) recordings dir so the
+# non-root "app" user can persist recording toggles. /app itself is read-only.
+ENV PREFERENCES_PATH=/app/recordings/recorder.ini
 VOLUME ["/app/recordings"]
 
 ENTRYPOINT ["defqon-recorder"]
