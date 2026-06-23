@@ -5,6 +5,9 @@ FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
 
+# Oto uses ALSA through cgo on Linux.
+RUN apk add --no-cache build-base pkgconf alsa-lib-dev
+
 # Cache dependencies first.
 COPY go.mod go.sum ./
 RUN go mod download
@@ -12,7 +15,7 @@ RUN go mod download
 COPY . .
 
 ARG VERSION=dev
-RUN CGO_ENABLED=0 go build \
+RUN CGO_ENABLED=1 go build \
     -ldflags "-s -w -X main.version=${VERSION}" \
     -o /out/defqon-recorder ./cmd/recorder
 
@@ -20,7 +23,7 @@ RUN CGO_ENABLED=0 go build \
 FROM alpine:3.20
 
 # yt-dlp and FFmpeg are required at runtime to download/convert streams.
-RUN apk add --no-cache ca-certificates ffmpeg yt-dlp \
+RUN apk add --no-cache ca-certificates ffmpeg yt-dlp alsa-lib \
     && addgroup -S app && adduser -S -G app app
 
 WORKDIR /app
