@@ -233,6 +233,11 @@ per-set MP3s** — one file per timetable set, cut from the raw recording
 (with `-c:a copy`, so no re-encode and no quality loss). The raw file in the
 recordings root is never modified.
 
+**Cuts happen live**: while a recording is running, each set is cut as soon as
+its end time is reached, so per-set files appear in real time. When the
+recording stops (stream goes offline, toggled off, or the app quits), the
+in-progress set is finalized as the last cut.
+
 ```
 recordings/
 ├── DEFQON.1.2026.UV.20260626.1255.LIVE.MP3-revunix.mp3   ← raw recording (kept)

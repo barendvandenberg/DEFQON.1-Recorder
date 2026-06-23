@@ -51,6 +51,20 @@ func Alnum(s string) string {
 	return b.String()
 }
 
+// AlnumDash keeps ASCII letters, digits and hyphens. It is used for DJ/artist
+// segments in scene-style file names where a hyphen is meaningful (e.g.
+// "D-Sturb"), unlike Alnum which would strip it.
+func AlnumDash(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
 // SystemUser returns the current OS user name, stripped of any Windows domain
 // prefix (e.g. "DOMAIN\\user" -> "user") and reduced to alphanumerics. It falls
 // back to "anonymous" when the user cannot be determined.

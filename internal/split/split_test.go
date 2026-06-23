@@ -1,6 +1,7 @@
 package split
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -70,10 +71,51 @@ func TestPlanSetsSkipsOutOfRange(t *testing.T) {
 }
 
 func TestSetReleaseNameSanitizes(t *testing.T) {
-	got := setReleaseName("UV", "D-Block & S-te-Fan", berlin(2026, 6, 26, 13, 0), "revunix")
-	want := "DEFQON.1.2026.UV.DBlockSteFan.20260626.1300.LIVE.MP3-revunix"
+	// Hyphens in DJ names are kept; date and time are omitted from the name.
+	got := setReleaseName("BLUE", "D-Sturb", berlin(2026, 6, 26, 13, 0), "revunix")
+	want := "DEFQON.1.2026.BLUE.D-Sturb.LIVE.MP3-revunix"
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
+	}
+
+	// Spaces and other separators (e.g. "&") are dropped; hyphens survive.
+	got = setReleaseName("UV", "D-Block & S-te-Fan", berlin(2026, 6, 26, 13, 0), "revunix")
+	if strings.Contains(got, "20260626") || strings.Contains(got, "1300") {
+		t.Fatalf("name must not contain date/time, got %q", got)
+	}
+	if !strings.Contains(got, "D-Block") || !strings.Contains(got, "te-Fan") {
+		t.Fatalf("hyphens should survive, got %q", got)
+	}
+}
+
+func TestPendingSegmentsSkipsAlreadyCut(t *testing.T) {
+	segs := []segment{
+		{set: timetable.Set{Start: berlin(2026, 6, 26, 13, 0)}},
+		{set: timetable.Set{Start: berlin(2026, 6, 26, 14, 0)}},
+		{set: timetable.Set{Start: berlin(2026, 6, 26, 15, 0)}},
+	}
+	// The 13:00 set was already produced live; only 14:00 and 15:00 remain.
+	cut := map[time.Time]bool{segs[0].set.Start: true}
+	pending := pendingSegments(segs, cut)
+	if len(pending) != 2 {
+		t.Fatalf("expected 2 pending, got %d", len(pending))
+	}
+	if !pending[0].set.Start.Equal(segs[1].set.Start) {
+		t.Fatalf("first pending should be 14:00, got %v", pending[0].set.Start)
+	}
+	if !pending[1].set.Start.Equal(segs[2].set.Start) {
+		t.Fatalf("second pending should be 15:00, got %v", pending[1].set.Start)
+	}
+}
+
+func TestPendingSegmentsNoCutReturnsAll(t *testing.T) {
+	segs := []segment{
+		{set: timetable.Set{Start: berlin(2026, 6, 26, 13, 0)}},
+		{set: timetable.Set{Start: berlin(2026, 6, 26, 14, 0)}},
+	}
+	// nil cut map: nothing was produced live, so everything is pending.
+	if pending := pendingSegments(segs, nil); len(pending) != 2 {
+		t.Fatalf("nil cut should return all segments, got %d", len(pending))
 	}
 }
 

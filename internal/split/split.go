@@ -4,6 +4,7 @@
 package split
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -58,6 +59,16 @@ func planSets(stage string, started, ended time.Time, tt *timetable.Timetable) [
 	return segs
 }
 
+// liveWatcher tracks the real-time cutting of one recording: a cancellable
+// context for its watcher goroutine, a done channel closed when the goroutine
+// has fully stopped, and the set start times already cut live (so the finish
+// handler can cut only the remaining tail).
+type liveWatcher struct {
+	cancel context.CancelFunc
+	done   chan struct{}
+	cut    map[time.Time]bool
+}
+
 // Splitter cuts finished recordings into tagged per-set files.
 type Splitter struct {
 	ffmpeg string
@@ -71,6 +82,9 @@ type Splitter struct {
 	http    *http.Client
 	mu      sync.Mutex
 	artwork map[string]string // artwork url -> cached local path
+
+	wmu  sync.Mutex
+	live map[string]*liveWatcher // stage -> active live watcher
 }
 
 func New(ffmpeg, dir, group, album, genre string, tt *timetable.Timetable, log logging.Logger) *Splitter {
@@ -87,38 +101,127 @@ func New(ffmpeg, dir, group, album, genre string, tt *timetable.Timetable, log l
 		log:     log,
 		http:    &http.Client{Timeout: 15 * time.Second},
 		artwork: map[string]string{},
+		live:    map[string]*liveWatcher{},
 	}
 }
 
-// OnRecordingFinished cuts rawPath into per-set files under <dir>/<stage>/, each
-// tagged with ID3 metadata and the channel artwork. The raw file is untouched.
-func (s *Splitter) OnRecordingFinished(stage, rawPath string, started, ended time.Time, artworkURL string) {
-	segs := planSets(stage, started, ended, s.tt)
-	if len(segs) == 0 {
-		return
-	}
-
+// OnRecordingStarted launches a live watcher that cuts each set as soon as its
+// end boundary is reached while the recording is still running, so per-set
+// files appear in real time. The raw recording is left untouched.
+func (s *Splitter) OnRecordingStarted(stage, rawPath string, started time.Time, artworkURL string) {
 	cover, err := s.fetchArtwork(artworkURL)
 	if err != nil {
 		s.log.Warn(fmt.Sprintf("[%s] artwork unavailable: %s (splitting without cover)", stage, err))
 		cover = ""
 	}
 
-	stageDir := filepath.Join(s.dir, util.Alnum(stage))
-	if err := os.MkdirAll(stageDir, 0o755); err != nil {
-		s.log.Error(fmt.Sprintf("[%s] cannot create stage dir: %s", stage, err))
+	ctx, cancel := context.WithCancel(context.Background())
+	w := &liveWatcher{cancel: cancel, done: make(chan struct{}), cut: map[time.Time]bool{}}
+	s.wmu.Lock()
+	if old := s.live[stage]; old != nil {
+		old.cancel()
+		<-old.done
+	}
+	s.live[stage] = w
+	s.wmu.Unlock()
+
+	go s.watchSets(ctx, w, stage, rawPath, started, cover)
+}
+
+// watchSets waits for each set boundary (relative to the recording start) and
+// cuts the completed set. It returns when the context is cancelled (recording
+// stopped); the in-progress tail set is handled by OnRecordingFinished.
+func (s *Splitter) watchSets(ctx context.Context, w *liveWatcher, stage, rawPath string, started time.Time, cover string) {
+	defer close(w.done)
+
+	// Far-future end so every set from the recording start onward is planned.
+	segs := planSets(stage, started, started.Add(100*365*24*time.Hour), s.tt)
+	for _, seg := range segs {
+		boundary := started.Add(seg.offset + seg.duration)
+		if wait := time.Until(boundary); wait > 0 {
+			select {
+			case <-time.After(wait):
+			case <-ctx.Done():
+				return
+			}
+		}
+		if err := s.cutSegment(rawPath, stage, cover, seg); err != nil {
+			s.log.Error(fmt.Sprintf("[%s] live split %s failed: %s", stage, seg.set.DJ, err))
+			continue
+		}
+		w.cut[seg.set.Start] = true
+		s.log.Info(fmt.Sprintf("[%s] Live split set: %s (%s)",
+			stage, seg.set.DJ, util.FormatDuration(int(seg.duration.Minutes()))))
+	}
+}
+
+// OnRecordingFinished stops the live watcher and cuts the sets it did not
+// already produce — i.e. the in-progress tail set when the recording stopped.
+// No-ops on a missing or empty raw file (e.g. an empty recording that was
+// removed); the watcher is still cancelled to avoid a leak.
+func (s *Splitter) OnRecordingFinished(stage, rawPath string, started, ended time.Time, artworkURL string) {
+	s.wmu.Lock()
+	w := s.live[stage]
+	delete(s.live, stage)
+	s.wmu.Unlock()
+	if w != nil {
+		w.cancel()
+		<-w.done
+	}
+
+	if info, err := os.Stat(rawPath); err != nil || info.Size() == 0 {
 		return
 	}
 
-	for _, seg := range segs {
-		out := filepath.Join(stageDir, setReleaseName(stage, seg.set.DJ, seg.set.Start, s.group)+".mp3")
-		if err := s.cut(rawPath, out, seg, stage, cover); err != nil {
+	segs := planSets(stage, started, ended, s.tt)
+	if len(segs) == 0 {
+		return
+	}
+
+	var cut map[time.Time]bool
+	if w != nil {
+		cut = w.cut
+	}
+	cover, err := s.fetchArtwork(artworkURL)
+	if err != nil {
+		s.log.Warn(fmt.Sprintf("[%s] artwork unavailable: %s (splitting without cover)", stage, err))
+		cover = ""
+	}
+
+	for _, seg := range pendingSegments(segs, cut) {
+		if err := s.cutSegment(rawPath, stage, cover, seg); err != nil {
 			s.log.Error(fmt.Sprintf("[%s] split %s failed: %s", stage, seg.set.DJ, err))
 			continue
 		}
 		s.log.Info(fmt.Sprintf("[%s] Split set: %s (%s)",
 			stage, seg.set.DJ, util.FormatDuration(int(seg.duration.Minutes()))))
 	}
+}
+
+// pendingSegments drops the segments already cut live (keyed by set start time).
+func pendingSegments(segs []segment, cut map[time.Time]bool) []segment {
+	if len(cut) == 0 {
+		return segs
+	}
+	out := make([]segment, 0, len(segs))
+	for _, seg := range segs {
+		if !cut[seg.set.Start] {
+			out = append(out, seg)
+		}
+	}
+	return out
+}
+
+// cutSegment writes one per-set MP3 under <dir>/<stage>/, tagged with ID3
+// metadata and cover art. It is shared by the live watcher and the finish
+// (tail) cut so both produce identical files.
+func (s *Splitter) cutSegment(rawPath, stage, cover string, seg segment) error {
+	stageDir := filepath.Join(s.dir, util.Alnum(stage))
+	if err := os.MkdirAll(stageDir, 0o755); err != nil {
+		return err
+	}
+	out := filepath.Join(stageDir, setReleaseName(stage, seg.set.DJ, seg.set.Start, s.group)+".mp3")
+	return s.cut(rawPath, out, seg, stage, cover)
 }
 
 func (s *Splitter) cut(rawPath, out string, seg segment, stage, cover string) error {
@@ -162,13 +265,13 @@ func metadataTitle(stage, dj string, start time.Time) string {
 }
 
 // setReleaseName builds a scene-style name for a per-set file, e.g.
-// "DEFQON.1.2026.UV.DJname.20260626.1300.LIVE.MP3-revunix".
+// "DEFQON.1.2026.UV.D-Sturb.LIVE.MP3-revunix".
 func setReleaseName(stage, dj string, start time.Time, group string) string {
 	stg := util.Alnum(stage)
 	if stg == "" {
 		stg = "UNKNOWN"
 	}
-	artist := util.Alnum(dj)
+	artist := util.AlnumDash(dj)
 	if artist == "" {
 		artist = "TBA"
 	}
@@ -176,8 +279,8 @@ func setReleaseName(stage, dj string, start time.Time, group string) string {
 	if grp == "" {
 		grp = "anonymous"
 	}
-	return fmt.Sprintf("DEFQON.1.%d.%s.%s.%s.%s.LIVE.MP3-%s",
-		start.Year(), stg, artist, start.Format("20060102"), start.Format("1504"), grp)
+	return fmt.Sprintf("DEFQON.1.%d.%s.%s.LIVE.MP3-%s",
+		start.Year(), stg, artist, grp)
 }
 
 // fetchArtwork downloads (and caches) the artwork for a URL in the OS temp dir.

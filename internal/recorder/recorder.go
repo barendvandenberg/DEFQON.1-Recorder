@@ -42,10 +42,15 @@ type recording struct {
 	stopping  bool // set when Stop/kill is intentional; suppresses exit diagnostics
 }
 
-// PostRecorder is invoked after a recording finishes successfully, so optional
-// post-processing (e.g. per-set splitting + ID3 tagging) can run. It must not
-// block the recorder for long; heavy work should be dispatched internally.
+// PostRecorder observes a recording's lifecycle so optional post-processing
+// (e.g. per-set splitting + ID3 tagging) can react to it. OnRecordingStarted is
+// called once a recording is live and may begin streaming-side work (such as
+// cutting each set as soon as it ends). OnRecordingFinished is called when the
+// recording stops — including an app shutdown — so any in-progress tail set can
+// be finalized. It must not block the recorder for long; heavy work should be
+// dispatched internally.
 type PostRecorder interface {
+	OnRecordingStarted(stage, path string, started time.Time, artworkURL string)
 	OnRecordingFinished(stage, path string, started, ended time.Time, artworkURL string)
 }
 
@@ -249,6 +254,10 @@ func (m *Manager) Start(stage, streamURL string, listeners int, artworkURL strin
 	go m.watchStderr(rec, "yt-dlp", ytdlpStderr)
 	go m.watchStderr(rec, "ffmpeg", ffmpegStderr)
 	go m.run(stage, rec, pipeR, pipeW, outFile, ffmpegStdout)
+
+	if m.post != nil {
+		m.post.OnRecordingStarted(stage, outputPath, startedAt, artworkURL)
+	}
 }
 
 // cleanupStartFailure releases every resource allocated for a recording whose
@@ -287,38 +296,47 @@ func (m *Manager) run(stage string, rec *recording, pipeR, pipeW, outFile *os.Fi
 	<-copyDone
 	pipeR.Close()
 
-	if atomic.LoadInt32(&m.stopped) == 0 {
-		// Process exit diagnostics only matter when the recording was not
-		// stopped on purpose: an intentional Stop expects yt-dlp/ffmpeg to be
-		// interrupted, so logging "Interrupted by user" / non-zero exits would
-		// just look like errors.
-		if !rec.isStopping() {
-			if ytdlpErr != nil {
-				if ee, ok := ytdlpErr.(*exec.ExitError); ok {
-					m.log.Info(fmt.Sprintf("[%s] yt-dlp exited (code %d).", stage, ee.ExitCode()))
-				} else {
-					m.log.Error(fmt.Sprintf("[%s] yt-dlp: %s", stage, ytdlpErr))
-				}
-			}
-			if ffmpegErr != nil {
-				m.log.Error(fmt.Sprintf("[%s] ffmpeg: %s", stage, ffmpegErr))
-			}
-		}
-		finished := false
-		if info, err := os.Stat(rec.path); err == nil {
-			if info.Size() == 0 {
-				_ = os.Remove(rec.path)
-				m.log.Warn(fmt.Sprintf("[%s] Removed empty recording.", stage))
+	stopped := atomic.LoadInt32(&m.stopped) != 0
+
+	// Process exit diagnostics only matter when the recording was not stopped on
+	// purpose: an intentional Stop or shutdown expects yt-dlp/ffmpeg to be
+	// interrupted, so logging "Interrupted by user" / non-zero exits would just
+	// look like errors.
+	if !stopped && !rec.isStopping() {
+		if ytdlpErr != nil {
+			if ee, ok := ytdlpErr.(*exec.ExitError); ok {
+				m.log.Info(fmt.Sprintf("[%s] yt-dlp exited (code %d).", stage, ee.ExitCode()))
 			} else {
-				finished = true
+				m.log.Error(fmt.Sprintf("[%s] yt-dlp: %s", stage, ytdlpErr))
 			}
 		}
-		if finished {
-			m.log.Info(fmt.Sprintf("[%s] Recording finished.", stage))
-			if m.post != nil {
-				m.post.OnRecordingFinished(stage, rec.path, rec.startedAt, time.Now().UTC(), rec.artwork)
-			}
+		if ffmpegErr != nil {
+			m.log.Error(fmt.Sprintf("[%s] ffmpeg: %s", stage, ffmpegErr))
 		}
+	}
+
+	// A recording counts as "finished" when it leaves a non-empty file.
+	finished := false
+	if info, err := os.Stat(rec.path); err == nil {
+		if info.Size() == 0 {
+			_ = os.Remove(rec.path)
+			if !stopped {
+				m.log.Warn(fmt.Sprintf("[%s] Removed empty recording.", stage))
+			}
+		} else {
+			finished = true
+		}
+	}
+	if finished {
+		m.log.Info(fmt.Sprintf("[%s] Recording finished.", stage))
+	}
+
+	// Always notify the post-processor so its live watcher is cancelled and the
+	// in-progress tail set is cut — even on shutdown or when the file was empty
+	// (the splitter no-ops on a missing/empty raw file). Without this, quitting
+	// the app would discard the final set.
+	if m.post != nil {
+		m.post.OnRecordingFinished(stage, rec.path, rec.startedAt, time.Now().UTC(), rec.artwork)
 	}
 	m.remove(stage, rec)
 }
