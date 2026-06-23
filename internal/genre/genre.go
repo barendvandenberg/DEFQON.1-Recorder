@@ -9,6 +9,7 @@ import "strings"
 // stageGenres maps a stage name (upper-cased) to its primary genre. These are
 // the signature sounds of each DEFQON.1 stage.
 var stageGenres = map[string]string{
+	"RED":     "Hardstyle",
 	"MAGENTA": "Hardstyle Classics",
 	"PURPLE":  "Hardstyle",
 	"WHITE":   "Freestyle",

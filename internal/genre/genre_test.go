@@ -10,6 +10,7 @@ func TestForStageMapped(t *testing.T) {
 		"YELLOW":  "Uptempo Hardcore",
 		"BLACK":   "Hardcore",
 		"PINK":    "Drum & Bass",
+		"RED":     "Hardstyle",
 	}
 	for stage, want := range cases {
 		if got := ForStage(stage, "ignored"); got != want {

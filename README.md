@@ -242,8 +242,11 @@ recordings/
 ```
 
 Each split carries ID3 tags (title, artist=DJ, album, year, genre) and the
-Mixlr channel artwork as embedded cover art. Disable splitting with
-`SPLIT_SETS=false`; customize tags via `ID3_ALBUM` / `ID3_GENRE`.
+Mixlr channel artwork as embedded cover art. The genre tag is **stage-specific**
+(e.g. BLUE → Rawstyle, UV → Euphoric Hardstyle, BLACK → Hardcore); stages that
+are not mapped fall back to `ID3_GENRE` (default `Hardstyle`). Disable splitting
+with `SPLIT_SETS=false`; customize the album and fallback genre via `ID3_ALBUM`
+/ `ID3_GENRE`.
 
 ## 🛠️ Configuration
 
@@ -261,7 +264,7 @@ The application works with sensible defaults — no configuration required.
 | `PREFERENCES_PATH`     | Path to the recording-toggle preferences file | `recorder.ini`      |
 | `SPLIT_SETS`           | After finishing, cut tagged per-set MP3s into a per-stage folder | `true` |
 | `ID3_ALBUM`            | ID3 album tag for split files                 | `DEFQON.1`          |
-| `ID3_GENRE`            | ID3 genre tag for split files                 | `Hardstyle`         |
+| `ID3_GENRE`            | Fallback ID3 genre tag for unmapped stages     | `Hardstyle`         |
 | `CHECK_INTERVAL_MS`    | Stream check interval (ms)                   | `60000`             |
 | `TUI_UPDATE_INTERVAL_MS` | UI refresh rate (ms)                        | `2000`              |
 
