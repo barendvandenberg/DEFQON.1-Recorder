@@ -1,10 +1,13 @@
 # Build artifacts & toolchain output
 /dist/
 /bin/
+/build/
 /defqon-recorder
+/external tools/
 
 # Runtime data
 /recordings/
+/docker-recordings/
 *.mp3
 *.log
 
