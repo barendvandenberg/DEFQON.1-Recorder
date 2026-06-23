@@ -104,7 +104,7 @@ func (c *Controller) checkChannel(ctx context.Context, channel string) {
 		if c.recorder.IsRecording(stage) {
 			c.recorder.UpdateListeners(stage, ch.ListenerCount)
 		} else {
-			c.recorder.Start(stage, ch.StreamURL, ch.ListenerCount)
+			c.recorder.Start(stage, ch.StreamURL, ch.ListenerCount, ch.ArtworkURL)
 		}
 		return
 	}

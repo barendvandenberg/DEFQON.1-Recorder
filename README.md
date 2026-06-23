@@ -20,6 +20,9 @@ A powerful terminal-based application for recording multiple Mixlr streams simul
 - 🔇 **Selective recording** — toggle individual channels on/off (`d`); skipped stages show **Skip** and are never recorded
 - 💾 **Persisted preferences** — your recording toggles are saved to `recorder.ini` and restored on restart
 - 🏷️ **Scene-style file naming** — recordings are named like audio-scene releases (e.g. `DEFQON.1.2026.BLUE.…-USER`)
+- 🎼 **ID3 tags + artwork** — per-set files are tagged (artist=DJ, album, year, genre) with the Mixlr channel artwork embedded
+- ✂️ **Per-set splitting** — the raw recording is kept untouched; a per-stage folder holds one tagged MP3 per timetable set
+- 💽 **Disk usage** — total recorded size and free space shown live in the status bar
 - 🚀 **Cross-platform** — one static binary for macOS, Linux and Windows (no runtime needed)
 - ⚡ **Graceful shutdown** — `q`, `Ctrl+C` and Docker `SIGTERM` all finish recordings cleanly
 
@@ -223,6 +226,25 @@ Example: `DEFQON.1.2026.BLUE.20260626.1800.LIVE.MP3-revunix`
 
 Special characters in the stage or group are stripped automatically.
 
+### Per-set splitting & ID3 tags
+
+After a recording finishes, each stage also gets a subfolder of **tagged,
+per-set MP3s** — one file per timetable set, cut from the raw recording
+(with `-c:a copy`, so no re-encode and no quality loss). The raw file in the
+recordings root is never modified.
+
+```
+recordings/
+├── DEFQON.1.2026.UV.20260626.1255.LIVE.MP3-revunix.mp3   ← raw recording (kept)
+└── UV/
+    ├── DEFQON.1.2026.UV.Angerfist.20260626.1300.LIVE.MP3-revunix.mp3
+    └── DEFQON.1.2026.UV.DBlockSteFan.20260626.1400.LIVE.MP3-revunix.mp3
+```
+
+Each split carries ID3 tags (title, artist=DJ, album, year, genre) and the
+Mixlr channel artwork as embedded cover art. Disable splitting with
+`SPLIT_SETS=false`; customize tags via `ID3_ALBUM` / `ID3_GENRE`.
+
 ## 🛠️ Configuration
 
 The application works with sensible defaults — no configuration required.
@@ -237,6 +259,9 @@ The application works with sensible defaults — no configuration required.
 | `TEST_MIXLR_CHANNEL`   | Optional extra Mixlr channel slug for testing | unset               |
 | `RECORDING_BLACKLIST`  | Comma-separated channel slugs that should not be recorded (initial defaults; `recorder.ini` overrides) | unset |
 | `PREFERENCES_PATH`     | Path to the recording-toggle preferences file | `recorder.ini`      |
+| `SPLIT_SETS`           | After finishing, cut tagged per-set MP3s into a per-stage folder | `true` |
+| `ID3_ALBUM`            | ID3 album tag for split files                 | `DEFQON.1`          |
+| `ID3_GENRE`            | ID3 genre tag for split files                 | `Hardstyle`         |
 | `CHECK_INTERVAL_MS`    | Stream check interval (ms)                   | `60000`             |
 | `TUI_UPDATE_INTERVAL_MS` | UI refresh rate (ms)                        | `2000`              |
 

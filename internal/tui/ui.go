@@ -11,6 +11,7 @@ import (
 	"github.com/rivo/tview"
 
 	"github.com/revunix/defqon1-recorder/internal/config"
+	"github.com/revunix/defqon1-recorder/internal/disk"
 	"github.com/revunix/defqon1-recorder/internal/listener"
 	"github.com/revunix/defqon1-recorder/internal/logging"
 	"github.com/revunix/defqon1-recorder/internal/recorder"
@@ -318,13 +319,17 @@ func (u *UI) buildStatusBar() string {
 	if audio.State == listener.StatePlaying || audio.State == listener.StateStarting {
 		hint = "(s)stop"
 	}
+	usage := disk.Scan(u.cfg.RecordingsDir)
+	diskText := fmt.Sprintf("%s / %s free",
+		util.FormatBytes(int64(usage.Total)), util.FormatBytes(int64(usage.VolumeFree)))
 	return util.Sanitize(fmt.Sprintf(
-		"DEFQON.1 Recorder by revunix | Active: %d/%d | Total Listeners: %s | Audio: %s %s",
+		"DEFQON.1 Recorder by revunix | Active: %d/%d | Listeners: %s | Audio: %s %s | Disk: %s",
 		u.recorder.Count(),
 		len(u.cfg.Channels),
 		util.FormatThousands(u.recorder.TotalListeners()),
 		audioText,
 		hint,
+		diskText,
 	))
 }
 

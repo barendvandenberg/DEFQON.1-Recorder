@@ -36,8 +36,17 @@ type recording struct {
 	listeners int
 	lastSize  int64
 	lastCheck time.Time
+	artwork   string
+	startedAt time.Time
 	mu        sync.Mutex
 	stopping  bool // set when Stop/kill is intentional; suppresses exit diagnostics
+}
+
+// PostRecorder is invoked after a recording finishes successfully, so optional
+// post-processing (e.g. per-set splitting + ID3 tagging) can run. It must not
+// block the recorder for long; heavy work should be dispatched internally.
+type PostRecorder interface {
+	OnRecordingFinished(stage, path string, started, ended time.Time, artworkURL string)
 }
 
 func (r *recording) markStopping() {
@@ -57,6 +66,7 @@ type Manager struct {
 	stalledAfter time.Duration
 	paths        tools.Paths
 	group        string
+	post         PostRecorder
 	log          logging.Logger
 
 	mu     sync.RWMutex
@@ -66,7 +76,7 @@ type Manager struct {
 	stopped int32
 }
 
-func New(dir string, stalledAfter time.Duration, toolsDir string, group string, log logging.Logger) *Manager {
+func New(dir string, stalledAfter time.Duration, toolsDir string, group string, post PostRecorder, log logging.Logger) *Manager {
 	if log == nil {
 		log = logging.Noop{}
 	}
@@ -77,6 +87,7 @@ func New(dir string, stalledAfter time.Duration, toolsDir string, group string, 
 		stalledAfter: stalledAfter,
 		paths:        paths,
 		group:        group,
+		post:         post,
 		log:          log,
 		active:       make(map[string]*recording),
 	}
@@ -120,8 +131,9 @@ func (m *Manager) Count() int {
 	return len(m.active)
 }
 
-func (m *Manager) Start(stage, streamURL string, listeners int) {
-	fileName := sceneReleaseName(stage, time.Now().UTC(), m.group) + ".mp3"
+func (m *Manager) Start(stage, streamURL string, listeners int, artworkURL string) {
+	startedAt := time.Now().UTC()
+	fileName := sceneReleaseName(stage, startedAt, m.group) + ".mp3"
 	outputPath := filepath.Join(m.dir, fileName)
 
 	// yt-dlp downloads the raw audio stream to stdout; ffmpeg transcodes it to
@@ -173,6 +185,8 @@ func (m *Manager) Start(stage, streamURL string, listeners int) {
 		path:      outputPath,
 		fileName:  fileName,
 		listeners: listeners,
+		artwork:   artworkURL,
+		startedAt: startedAt,
 		lastCheck: time.Now(),
 	}
 
@@ -290,11 +304,20 @@ func (m *Manager) run(stage string, rec *recording, pipeR, pipeW, outFile *os.Fi
 				m.log.Error(fmt.Sprintf("[%s] ffmpeg: %s", stage, ffmpegErr))
 			}
 		}
-		if info, err := os.Stat(rec.path); err == nil && info.Size() == 0 {
-			_ = os.Remove(rec.path)
-			m.log.Warn(fmt.Sprintf("[%s] Removed empty recording.", stage))
-		} else {
+		finished := false
+		if info, err := os.Stat(rec.path); err == nil {
+			if info.Size() == 0 {
+				_ = os.Remove(rec.path)
+				m.log.Warn(fmt.Sprintf("[%s] Removed empty recording.", stage))
+			} else {
+				finished = true
+			}
+		}
+		if finished {
 			m.log.Info(fmt.Sprintf("[%s] Recording finished.", stage))
+			if m.post != nil {
+				m.post.OnRecordingFinished(stage, rec.path, rec.startedAt, time.Now().UTC(), rec.artwork)
+			}
 		}
 	}
 	m.remove(stage, rec)

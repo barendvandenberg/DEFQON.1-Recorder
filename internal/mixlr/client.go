@@ -27,6 +27,7 @@ type Channel struct {
 	Live          bool // authoritative online flag from data.attributes.live
 	StreamURL     string
 	ListenerCount int
+	ArtworkURL    string // channel artwork used as ID3 cover art
 }
 
 // Fetch queries a channel and returns its decoded state.
@@ -89,8 +90,9 @@ type reference struct {
 
 func (r *channelViewResponse) channel() Channel {
 	ch := Channel{
-		Username: r.username(),
-		Live:     r.Data.attrBool("live"),
+		Username:   r.username(),
+		Live:       r.Data.attrBool("live"),
+		ArtworkURL: r.Data.attrString("artwork_url"),
 	}
 	if b := r.currentBroadcast(); b != nil {
 		ch.StreamURL = b.attrString("progressive_stream_url")

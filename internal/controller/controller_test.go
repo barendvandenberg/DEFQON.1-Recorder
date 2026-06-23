@@ -22,7 +22,7 @@ func newTestController(t *testing.T, channels, blacklist []string) *Controller {
 	}
 	return New(
 		mixlr.New("https://example.invalid/"),
-		recorder.New(t.TempDir(), time.Minute, t.TempDir(), "tester", logging.Noop{}),
+		recorder.New(t.TempDir(), time.Minute, t.TempDir(), "tester", nil, logging.Noop{}),
 		&timetable.Timetable{},
 		status.New(channels),
 		logging.Noop{},
@@ -87,7 +87,7 @@ func TestTogglePersistsEachChange(t *testing.T) {
 	p := &recordingPersister{}
 	c := New(
 		mixlr.New("https://example.invalid/"),
-		recorder.New(t.TempDir(), time.Minute, t.TempDir(), "tester", logging.Noop{}),
+		recorder.New(t.TempDir(), time.Minute, t.TempDir(), "tester", nil, logging.Noop{}),
 		&timetable.Timetable{},
 		status.New(channels),
 		logging.Noop{},

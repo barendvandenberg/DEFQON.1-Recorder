@@ -17,6 +17,9 @@ type Config struct {
 	TimetablePath        string
 	ToolsDir             string
 	PreferencesPath      string
+	SplitSets            bool
+	ID3Album             string
+	ID3Genre             string
 	CheckInterval        time.Duration
 	StalledCheckInterval time.Duration
 	StalledTimeout       time.Duration
@@ -50,6 +53,9 @@ func Default() Config {
 		TimetablePath:        envOr("TIMETABLE_PATH", "dq-timetable.json"),
 		ToolsDir:             envOr("TOOLS_DIR", exeDir()),
 		PreferencesPath:      envOr("PREFERENCES_PATH", "recorder.ini"),
+		SplitSets:            envBoolOr("SPLIT_SETS", true),
+		ID3Album:             envOr("ID3_ALBUM", "DEFQON.1"),
+		ID3Genre:             envOr("ID3_GENRE", "Hardstyle"),
 		CheckInterval:        envDurationMSOr("CHECK_INTERVAL_MS", 60_000*time.Millisecond),
 		StalledCheckInterval: 30 * time.Second,
 		StalledTimeout:       60 * time.Second,
@@ -82,6 +88,18 @@ func parseCSV(env string) []string {
 func envOr(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return def
+}
+
+// envBoolOr reads a boolean env var. Accepts 1/true/yes/on (case-insensitive);
+// anything else (including unset) returns the default.
+func envBoolOr(key string, def bool) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(key))) {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
 	}
 	return def
 }

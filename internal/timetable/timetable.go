@@ -21,6 +21,11 @@ type Timetable struct {
 	sets []Set
 }
 
+// NewWithSets builds a timetable from an explicit set list (useful for tests).
+func NewWithSets(sets []Set) *Timetable {
+	return &Timetable{sets: sets}
+}
+
 func (t *Timetable) Size() int { return len(t.sets) }
 
 func (t *Timetable) CurrentSet(stage string) *Set {
@@ -46,6 +51,18 @@ func (t *Timetable) Upcoming() []Set {
 		}
 	}
 	return result
+}
+
+// SetsForStage returns every known set for a stage, ordered by start time. It
+// is used by the splitter to cut a recording into per-set files.
+func (t *Timetable) SetsForStage(stage string) []Set {
+	var out []Set
+	for _, s := range t.sets {
+		if s.Stage == stage {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 type rawStage struct {

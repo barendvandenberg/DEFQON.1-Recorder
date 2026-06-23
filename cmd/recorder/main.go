@@ -14,8 +14,10 @@ import (
 	"github.com/revunix/defqon1-recorder/internal/mixlr"
 	"github.com/revunix/defqon1-recorder/internal/prefs"
 	"github.com/revunix/defqon1-recorder/internal/recorder"
+	"github.com/revunix/defqon1-recorder/internal/split"
 	"github.com/revunix/defqon1-recorder/internal/status"
 	"github.com/revunix/defqon1-recorder/internal/timetable"
+	"github.com/revunix/defqon1-recorder/internal/tools"
 	"github.com/revunix/defqon1-recorder/internal/tui"
 	"github.com/revunix/defqon1-recorder/internal/util"
 )
@@ -46,7 +48,12 @@ func main() {
 	}
 
 	client := mixlr.New(cfg.APIBaseURL)
-	rec := recorder.New(cfg.RecordingsDir, cfg.StalledTimeout, cfg.ToolsDir, util.SystemUser(), logger)
+	group := util.SystemUser()
+	var post recorder.PostRecorder
+	if cfg.SplitSets {
+		post = split.New(tools.Resolve(cfg.ToolsDir).FFmpeg, cfg.RecordingsDir, group, cfg.ID3Album, cfg.ID3Genre, tt, logger)
+	}
+	rec := recorder.New(cfg.RecordingsDir, cfg.StalledTimeout, cfg.ToolsDir, group, post, logger)
 	reg := status.New(cfg.Channels)
 
 	// Resolve which channels may be recorded: start from all-enabled, apply the
