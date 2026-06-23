@@ -9,39 +9,48 @@ A powerful terminal-based application for recording multiple Mixlr streams simul
 ## ✨ Features
 
 - 🎵 **Simultaneous recording** of all 14 Mixlr stages
-- 🖥️ **Live TUI dashboard** with two tables, a log panel and a status bar
+- 🖥️ **Live TUI dashboard** with two tables, a log panel, a status bar and a controls bar
 - 🟢 **Online & offline tracking** — every stage is always listed, with its current state
 - 🎨 **Real stage colors** — each stage is rendered in its actual DEFQON.1 signature color
 - 📊 **Real-time listener counts**, file sizes and set-end countdowns
 - 📅 **Built-in timetable** with DJ set times, current-DJ detection and "starts in" countdowns
 - 🔍 **Live detection** straight from the Mixlr `data.attributes.live` flag
 - 🛡️ **Robust recovery** — stalled streams are detected and restarted automatically
+- 🎧 **In-TUI audio playback** — listen to any live stream right in the terminal (`l` / `s`, macOS/Windows builds)
+- 🔇 **Selective recording** — toggle individual channels on/off (`d`); skipped stages show **Skip** and are never recorded
+- 💾 **Persisted preferences** — your recording toggles are saved to `recorder.ini` and restored on restart
+- 🏷️ **Scene-style file naming** — recordings are named like audio-scene releases (e.g. `DEFQON.1.2026.BLUE.…-USER`)
 - 🚀 **Cross-platform** — one static binary for macOS, Linux and Windows (no runtime needed)
 - ⚡ **Graceful shutdown** — `q`, `Ctrl+C` and Docker `SIGTERM` all finish recordings cleanly
 
 ## 🖼️ The Interface
 
-The dashboard is split into four regions:
+The dashboard is split into five regions:
 
 ```
 ┌─ Streams ──────────────────┐ ┌─ Timetable ───────────────┐
 │ Stage Status Artist ...    │ │ Stage Time Artist Starts  │
 │  RED  Rec.  Atmozfears ... │ │  UV  13:00 ...    2h 15m  │
-│ BLUE  Off.       -     -   │ │ RED  14:00 ...    3h  0m  │
+│ BLUE  Skip      -     -    │ │ RED  14:00 ...    3h  0m  │
 │  ...                       │ │  ...                      │
 ├─ Logs ───────────────────────────────────────────────────┤
 │ 13:00:02 --- Checking channels at 13:00:02 ---           │
 │ 13:00:03 [RED] Starting recording...                     │
 ├─ Status ─────────────────────────────────────────────────┤
-│ Active: 3/14 | Total Listeners: 12.345                   │
+│ Active: 1/14 | Total Listeners: 12.345 | Audio: Playing  │
+├─ Controls ───────────────────────────────────────────────┤
+│ (l) Listen  (s) Stop  (d) Toggle  (↑/↓) Select  (q) Quit │
 └──────────────────────────────────────────────────────────┘
 ```
 
 - **Streams** (left) lists every stage with `Stage | Status | Artist | Listeners | Size | Ends in`.
   Status colors: <span style="color:#00C853">**Recording**</span> (green),
   <span style="color:#FFD600">**Online**</span> (yellow),
-  <span style="color:#7A7A7A">**Offline**</span> (gray).
+  <span style="color:#7A7A7A">**Offline**</span> (gray),
+  <span style="color:#00BFA5">**Skip**</span> (teal — recording disabled for this channel).
 - **Timetable** (right) shows the next upcoming set per stage with `Stage | Time | Artist | Starts In`.
+- **Status** summarizes active recordings, total listeners and the TUI audio state.
+- **Controls** is a always-visible keybinding legend.
 - Stage names appear in their real color (RED, BLUE, MAGENTA, UV, …).
 
 ## 🛠️ Tech Stack
@@ -62,16 +71,20 @@ internal/
   logging/           Minimal Logger interface (no silent failures)
   mixlr/             Mixlr JSON:API client (live flag + broadcast stream URL)
   timetable/         Timetable loader, current & upcoming set queries
-  recorder/          yt-dlp process manager, stalled monitor, shutdown
-  controller/        Channel-check & stalled-monitor scheduling loops
+  recorder/          yt-dlp process manager, scene-style naming, stalled monitor
+  controller/        Channel-check scheduling, recording-enable policy + toggles
   status/            Per-channel stream state (online/offline) registry
+  listener/          In-TUI audio playback via ffmpeg → oto (macOS/Windows; Linux stub)
+  prefs/             Persisted recording-toggle preferences (INI store)
   tools/             Bundled yt-dlp / ffmpeg discovery (bundled dir → PATH)
-  tui/               tview dashboard (tables, logs, status) + channel logger
-  util/              Shared helpers (formatting, sanitization, timezone)
+  tui/               tview dashboard (tables, logs, status, controls) + channel logger
+  util/              Shared helpers (formatting, sanitization, timezone, system user)
 ```
 
 Data flow: `Controller → Mixlr client → Recorder → yt-dlp`, with the `status`
-registry feeding the TUI and the `timetable` enriching artist/ends-in columns.
+registry feeding the TUI, the `timetable` enriching artist/ends-in columns,
+recording toggles flowing `TUI → Controller (policy) → prefs`, and TUI audio
+flowing `TUI → listener → ffmpeg → oto`.
 
 ## 🚀 Getting Started
 
@@ -155,6 +168,9 @@ docker run --rm -it -v "$PWD/recordings:/app/recordings" defqon-recorder
 
 The image bundles yt-dlp and FFmpeg, so only Docker is required to run it.
 Mount a volume to persist your recordings.
+Recording preferences (`recorder.ini`) are stored inside the recordings volume
+automatically (`PREFERENCES_PATH=/app/recordings/recorder.ini`), so your channel
+toggles survive container restarts — no extra mount needed.
 TUI audio playback (`l`) is only available on the native macOS/Windows builds;
 the Linux/Docker build runs headless without an audio backend.
 
