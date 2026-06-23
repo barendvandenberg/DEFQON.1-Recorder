@@ -189,15 +189,15 @@ defqon1red=off
 Recordings are saved as MP3 using an audio-scene-style release name:
 
 ```
-DEFQON.1.S{YEAR}.{STAGE}.{YYYYMMDD}.{HHMM}.LIVE.MP3-{USER}
+DEFQON.1.{YEAR}.{STAGE}.{YYYYMMDD}.{HHMM}.LIVE.MP3-{USER}
 ```
 
-Example: `DEFQON.1.S2026.BLUE.20260626.1800.LIVE.MP3-revunix`
+Example: `DEFQON.1.2026.BLUE.20260626.1800.LIVE.MP3-revunix`
 
 | Segment   | Meaning                                            |
 |-----------|----------------------------------------------------|
 | `DEFQON.1`| Release title                                      |
-| `S2026`   | Season (event year)                                |
+| `2026`    | Event year                                         |
 | `BLUE`    | Stage                                              |
 | `20260626`| Recording date (UTC)                               |
 | `1800`    | Recording start time (UTC, HHMM) — keeps separate sets unique |

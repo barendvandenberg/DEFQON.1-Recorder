@@ -9,7 +9,7 @@ import (
 func TestSceneReleaseName(t *testing.T) {
 	ts := time.Date(2026, 6, 26, 18, 0, 7, 0, time.UTC)
 	got := sceneReleaseName("BLUE", ts, "revunix")
-	want := "DEFQON.1.S2026.BLUE.20260626.1800.LIVE.MP3-revunix"
+	want := "DEFQON.1.2026.BLUE.20260626.1800.LIVE.MP3-revunix"
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
