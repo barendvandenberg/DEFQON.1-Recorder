@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/revunix/defqon1-recorder/internal/genre"
 	"github.com/revunix/defqon1-recorder/internal/logging"
 	"github.com/revunix/defqon1-recorder/internal/timetable"
 	"github.com/revunix/defqon1-recorder/internal/util"
@@ -142,7 +143,7 @@ func (s *Splitter) cut(rawPath, out string, seg segment, stage, cover string) er
 		"-metadata", "album_artist=DEFQON.1",
 		"-metadata", "album="+s.album,
 		"-metadata", "date="+fmt.Sprint(seg.set.Start.Year()),
-		"-metadata", "genre="+s.genre,
+		"-metadata", "genre="+genre.ForStage(stage, s.genre),
 		"-metadata", "comment=Recorded with DEFQON.1 Stream Recorder",
 		out,
 	)
