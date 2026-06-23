@@ -51,7 +51,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ui := tui.New(cfg, rec, tt, reg, logCh)
+	ui := tui.New(cfg, rec, tt, reg, logCh, logger)
 
 	go ctrl.Run(ctx, cfg.CheckInterval, cfg.StalledCheckInterval)
 	go ui.RunRefresh(ctx)
@@ -71,5 +71,6 @@ func main() {
 	}
 
 	cancel()
+	ui.Close()
 	rec.StopAll(10 * time.Second)
 }
