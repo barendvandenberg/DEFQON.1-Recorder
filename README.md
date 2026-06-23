@@ -155,8 +155,8 @@ docker run --rm -it -v "$PWD/recordings:/app/recordings" defqon-recorder
 
 The image bundles yt-dlp and FFmpeg, so only Docker is required to run it.
 Mount a volume to persist your recordings.
-To use TUI audio playback from inside Docker on Linux, pass through the host
-sound device as well, for example `--device /dev/snd`.
+TUI audio playback (`l`) is only available on the native macOS/Windows builds;
+the Linux/Docker build runs headless without an audio backend.
 
 ## 🎛️ Controls
 
