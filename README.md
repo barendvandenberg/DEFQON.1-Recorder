@@ -2,7 +2,7 @@
 
 A powerful terminal-based application for recording multiple Mixlr streams simultaneously with a beautiful TUI (Terminal User Interface). Built in Go as a single static binary, it watches every DEFQON.1 stage, records live DJ sets the moment they go online, and recovers automatically from stalled streams.
 
-![Screenshot](screenshot_3.0.1.png)
+![Screenshot](screenshot_3.2.0.png)
 
 <a href='https://ko-fi.com/revunix' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://cdn.ko-fi.com/cdn/kofi1.png?v=3' border='0' alt='Buy Me a Coffee' /></a>
 
