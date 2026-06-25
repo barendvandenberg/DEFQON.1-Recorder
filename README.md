@@ -17,7 +17,7 @@ A powerful terminal-based application for recording DEFQON.1 streams with a beau
 - **Live detection** straight from the Mixlr `data.attributes.live` flag
 - **Robust recovery** — stalled streams are detected and restarted automatically
 - **In-TUI audio playback** — listen to any live stream right in the terminal (`l` / `s`, macOS/Windows builds)
-- **Experimental YouTube live recording** — native Windows/macOS builds can monitor configured YouTube event streams, record the trailer once while waiting, then record the live feed when it starts
+- **Experimental YouTube live recording** — native Windows/macOS builds can monitor configured YouTube event streams and record the live feed when it starts
 - **YouTube video preview** — open the selected YouTube feed in bundled `mpv` (`v`) or fullscreen (`f`), then close it with `Esc`
 - **Selective recording** — toggle individual channels on/off (`d`); skipped stages show **Skip** and are never recorded
 - **Persisted preferences** — stage toggles and YouTube recording modes are saved to `recorder.ini` and restored on restart
@@ -79,7 +79,7 @@ internal/
   mixlr/             Mixlr JSON:API client (live flag + broadcast stream URL)
   timetable/         Timetable loader, current & upcoming set queries
   recorder/          yt-dlp process manager, scene-style naming, stalled monitor
-  youtube/           YouTube live/trailer monitor, best-quality video capture + separate MP3
+  youtube/           YouTube live monitor, best-quality video capture + separate MP3
   controller/        Channel-check scheduling, recording-enable policy + toggles
   status/            Per-channel stream state (online/offline) registry
   listener/          In-TUI audio playback via ffmpeg → oto (macOS/Windows; Linux stub)
@@ -252,8 +252,8 @@ Behavior:
 - Each feed has a recording mode: `Video+MP3`, `MP3`, or `Off`.
 - Use `Tab` to focus the YouTube table and `d` to cycle the selected feed through
   `Video+MP3 -> MP3 -> Off`.
-- If a feed is not live yet and its mode is not `Off`, the app records the
-  trailer once and then checks again every 30 seconds.
+- If a feed is not live yet, the app shows `Not live` and checks again every
+  30 seconds.
 - If a feed becomes live and its mode is not `Off`, the app starts recording the
   live feed from the live edge, not from the start of the DVR window.
 - If the live feed ends, the app stops and finalizes the recording.
@@ -316,8 +316,8 @@ YouTube recordings use the same release-style shape. Video files use a
 `.mp3` filename:
 
 ```
-DEFQON.1.{YEAR}.YOUTUBE.{DAY}.{YYYYMMDD}.{HHMM}.{LIVE|TRAILER}.BEST-{USER}.mkv
-DEFQON.1.{YEAR}.YOUTUBE.{DAY}.{YYYYMMDD}.{HHMM}.{LIVE|TRAILER}.MP3-{USER}.mp3
+DEFQON.1.{YEAR}.YOUTUBE.{DAY}.{YYYYMMDD}.{HHMM}.LIVE.BEST-{USER}.mkv
+DEFQON.1.{YEAR}.YOUTUBE.{DAY}.{YYYYMMDD}.{HHMM}.LIVE.MP3-{USER}.mp3
 ```
 
 ### Per-set splitting & ID3 tags
