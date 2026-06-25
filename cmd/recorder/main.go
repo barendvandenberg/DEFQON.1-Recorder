@@ -20,6 +20,7 @@ import (
 	"github.com/revunix/defqon1-recorder/internal/tools"
 	"github.com/revunix/defqon1-recorder/internal/tui"
 	"github.com/revunix/defqon1-recorder/internal/util"
+	"github.com/revunix/defqon1-recorder/internal/youtube"
 )
 
 // version is set at build time via -ldflags "-X main.version=...".
@@ -60,11 +61,15 @@ func main() {
 	// RECORDING_BLACKLIST defaults, then let the persisted INI win so the user's
 	// last toggles survive a restart.
 	store := prefs.New(cfg.PreferencesPath)
-	saved, err := store.Load()
+	savedPrefs, err := store.LoadAll()
 	if err != nil {
 		logger.Warn(fmt.Sprintf("preferences: %s; starting with defaults", err))
-		saved = map[string]bool{}
+		savedPrefs = prefs.Preferences{
+			Recording: map[string]bool{},
+			YouTube:   map[string]string{},
+		}
 	}
+	saved := savedPrefs.Recording
 	enabled := make(map[string]bool, len(cfg.Channels))
 	for _, ch := range cfg.Channels {
 		enabled[ch] = true
@@ -75,21 +80,56 @@ func main() {
 	for ch, on := range saved {
 		enabled[ch] = on
 	}
-	// Seed a preferences file on first run so the user has a visible template.
-	if len(saved) == 0 {
-		if err := store.SaveAll(enabled); err != nil {
+
+	ytFeeds := make([]youtube.Feed, 0, len(cfg.YouTubeFeeds))
+	ytModes := make(map[string]youtube.RecordMode, len(cfg.YouTubeFeeds))
+	prefsChanged := false
+	if len(savedPrefs.Recording) == 0 {
+		savedPrefs.Recording = enabled
+		prefsChanged = true
+	}
+	if savedPrefs.YouTube == nil {
+		savedPrefs.YouTube = map[string]string{}
+	}
+	for _, feed := range cfg.YouTubeFeeds {
+		ytFeeds = append(ytFeeds, youtube.Feed{Name: feed.Name, URL: feed.URL})
+		mode := youtube.ModeVideoAudio
+		if raw, ok := savedPrefs.YouTube[feed.Name]; ok {
+			mode = youtube.ParseRecordMode(raw)
+		} else {
+			savedPrefs.YouTube[feed.Name] = string(mode)
+			prefsChanged = true
+		}
+		ytModes[feed.Name] = mode
+	}
+	// Seed missing preferences so the user has a visible template.
+	if prefsChanged {
+		if err := store.SavePreferences(savedPrefs); err != nil {
 			logger.Warn(fmt.Sprintf("preferences: cannot write %s: %s", cfg.PreferencesPath, err))
 		}
 	}
+
+	yt := youtube.New(youtube.Config{
+		Enabled:       cfg.YouTubeEnabled,
+		Feeds:         ytFeeds,
+		Modes:         ytModes,
+		RecordingsDir: cfg.RecordingsDir,
+		ToolsDir:      cfg.ToolsDir,
+		Group:         group,
+		PollInterval:  cfg.YouTubePollInterval,
+		StalledAfter:  cfg.YouTubeStalledAfter,
+		Persister:     store,
+	}, logger)
 
 	ctrl := controller.New(client, rec, tt, reg, logger, cfg.Channels, enabled, store)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ui := tui.New(cfg, rec, ctrl, tt, reg, logCh, logger)
+	ui := tui.New(cfg, rec, ctrl, tt, reg, yt, logCh, logger)
 
 	go ctrl.Run(ctx, cfg.CheckInterval, cfg.StalledCheckInterval)
+	go yt.Run(ctx)
 	go ui.RunRefresh(ctx)
 
 	sigCh := make(chan os.Signal, 1)
@@ -108,5 +148,6 @@ func main() {
 
 	cancel()
 	ui.Close()
+	yt.StopAll(10 * time.Second)
 	rec.StopAll(10 * time.Second)
 }

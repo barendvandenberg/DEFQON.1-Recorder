@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Downloads bundled yt-dlp + ffmpeg for a given target platform into a directory.
+# Downloads bundled yt-dlp + ffmpeg + mpv for a given target platform into a directory.
 # The resulting files are placed next to the recorder binary so it can use them
 # without any system-installed copies.
 #
@@ -15,6 +15,10 @@ DEST="${3:?missing destination directory}"
 YTDLP_BASE="https://github.com/yt-dlp/yt-dlp/releases/latest/download"
 FFMPEG_BASE="https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1"
 BTBN_BASE="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
+MPV_RELEASE="v0.41.0"
+MPV_BASE="https://github.com/mpv-player/mpv/releases/download/${MPV_RELEASE}"
+SHINCHIRO_RELEASE="20260610"
+SHINCHIRO_BASE="https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/${SHINCHIRO_RELEASE}"
 
 mkdir -p "$DEST"
 tmp="$(mktemp -d)"
@@ -62,10 +66,48 @@ else
 	exit 1
 fi
 
+# --- mpv ---------------------------------------------------------------------
+case "$OS-$ARCH" in
+	darwin-arm64)
+		mpv_asset="mpv-${MPV_RELEASE}-macos-14-arm.zip"
+		echo "  -> mpv    ($mpv_asset)"
+		dl "$MPV_BASE/$mpv_asset" "$tmp/mpv.zip"
+		mkdir -p "$tmp/mpvzip"
+		unzip -q "$tmp/mpv.zip" -d "$tmp/mpvzip"
+		tar -xzf "$tmp/mpvzip/mpv.tar.gz" -C "$DEST"
+		chmod +x "$DEST/mpv.app/Contents/MacOS/mpv" 2>/dev/null || true
+		;;
+	darwin-amd64)
+		mpv_asset="mpv-${MPV_RELEASE}-macos-15-intel.zip"
+		echo "  -> mpv    ($mpv_asset)"
+		dl "$MPV_BASE/$mpv_asset" "$tmp/mpv.zip"
+		mkdir -p "$tmp/mpvzip"
+		unzip -q "$tmp/mpv.zip" -d "$tmp/mpvzip"
+		tar -xzf "$tmp/mpvzip/mpv.tar.gz" -C "$DEST"
+		chmod +x "$DEST/mpv.app/Contents/MacOS/mpv" 2>/dev/null || true
+		;;
+	windows-amd64|windows-arm64)
+		mpv_asset="mpv-x86_64-${SHINCHIRO_RELEASE}-git-304426c.7z"
+		echo "  -> mpv    ($mpv_asset)"
+		dl "$SHINCHIRO_BASE/$mpv_asset" "$tmp/mpv.7z"
+		tar -xf "$tmp/mpv.7z" -C "$tmp" mpv.exe mpv.com d3dcompiler_43.dll mpv/fonts.conf
+		cp "$tmp/mpv.exe" "$DEST/mpv.exe"
+		cp "$tmp/mpv.com" "$DEST/mpv.com"
+		cp "$tmp/d3dcompiler_43.dll" "$DEST/d3dcompiler_43.dll"
+		mkdir -p "$DEST/mpv"
+		cp "$tmp/mpv/fonts.conf" "$DEST/mpv/fonts.conf"
+		;;
+	linux-*)
+		# Docker/Linux builds intentionally do not include TUI video preview.
+		;;
+	*) echo "unsupported mpv target: $OS-$ARCH" >&2; exit 1 ;;
+esac
+
 # --- macOS: ad-hoc sign so unsigned arm64 binaries can execute ---------------
 if [ "$OS" = darwin ] && command -v codesign >/dev/null 2>&1; then
 	codesign --force -s - "$DEST/$ytdlp_out" >/dev/null 2>&1 || true
 	codesign --force -s - "$DEST/$ff_out" >/dev/null 2>&1 || true
+	codesign --force --deep -s - "$DEST/mpv.app" >/dev/null 2>&1 || true
 fi
 
 echo "  -> bundled into $DEST"

@@ -67,6 +67,28 @@ func TestSaveSingleChannelUpdatesExistingFile(t *testing.T) {
 	}
 }
 
+func TestSaveYouTubePreservesRecording(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "recorder.ini")
+	s := New(path)
+	if err := s.SaveAll(map[string]bool{"defqon1blue": true, "defqon1red": false}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveYouTube("Friday", "audio"); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := New(path).LoadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !loaded.Recording["defqon1blue"] || loaded.Recording["defqon1red"] {
+		t.Fatalf("recording preferences were not preserved: %+v", loaded.Recording)
+	}
+	if loaded.YouTube["Friday"] != "audio" {
+		t.Fatalf("Friday mode = %q, want audio", loaded.YouTube["Friday"])
+	}
+}
+
 func TestParseIgnoresCommentsAndOtherSections(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "recorder.ini")
 	content := `# header comment
@@ -79,14 +101,19 @@ defqon1blue = true
 defqon1red=off
 bogus=
 =on
+
+[youtube]
+Friday=video_audio
+Saturday=audio
 `
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	got, err := New(path).Load()
+	all, err := New(path).LoadAll()
 	if err != nil {
 		t.Fatal(err)
 	}
+	got := all.Recording
 	if !got["defqon1blue"] {
 		t.Error("blue should be on")
 	}
@@ -95,6 +122,9 @@ bogus=
 	}
 	if _, ok := got["ignored"]; ok {
 		t.Error("entries outside [recording] must be ignored")
+	}
+	if all.YouTube["Friday"] != "video_audio" || all.YouTube["Saturday"] != "audio" {
+		t.Fatalf("youtube preferences not loaded: %+v", all.YouTube)
 	}
 }
 
@@ -110,6 +140,9 @@ func TestSaveProducesReadableINI(t *testing.T) {
 	text := string(raw)
 	if !strings.Contains(text, "[recording]") {
 		t.Errorf("written file should contain the recording section, got:\n%s", text)
+	}
+	if !strings.Contains(text, "[youtube]") {
+		t.Errorf("written file should contain the youtube section, got:\n%s", text)
 	}
 	if !strings.Contains(text, "defqon1blue=on") {
 		t.Errorf("expected defqon1blue=on, got:\n%s", text)

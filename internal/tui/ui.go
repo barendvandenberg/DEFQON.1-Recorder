@@ -18,6 +18,7 @@ import (
 	"github.com/revunix/defqon1-recorder/internal/status"
 	"github.com/revunix/defqon1-recorder/internal/timetable"
 	"github.com/revunix/defqon1-recorder/internal/util"
+	"github.com/revunix/defqon1-recorder/internal/youtube"
 )
 
 // State colors.
@@ -67,11 +68,13 @@ type UI struct {
 	root        *tview.Flex
 	streamTbl   *tview.Table
 	ttTable     *tview.Table
+	ytTable     *tview.Table
 	logView     *tview.TextView
 	statusBar   *tview.TextView
 	controlsBar *tview.TextView
 	recorder    *recorder.Manager
 	listener    *listener.Player
+	youtube     *youtube.Manager
 	gate        RecordingGate
 	timetable   *timetable.Timetable
 	streams     *status.Registry
@@ -85,6 +88,7 @@ func New(
 	gate RecordingGate,
 	tt *timetable.Timetable,
 	streams *status.Registry,
+	yt *youtube.Manager,
 	logCh <-chan LogMessage,
 	log logging.Logger,
 ) *UI {
@@ -93,6 +97,7 @@ func New(
 		cfg:       cfg,
 		recorder:  rec,
 		listener:  listener.New(cfg.ToolsDir, log),
+		youtube:   yt,
 		gate:      gate,
 		timetable: tt,
 		streams:   streams,
@@ -105,6 +110,9 @@ func New(
 func (u *UI) build() {
 	u.streamTbl = newTable(" Streams ", true)
 	u.ttTable = newTable(" Timetable ", false)
+	if u.youtube != nil && u.youtube.Enabled() {
+		u.ytTable = newTable(" YouTube ", true)
+	}
 
 	u.logView = tview.NewTextView().
 		SetDynamicColors(true).
@@ -121,23 +129,33 @@ func (u *UI) build() {
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft).
 		SetWrap(false)
-	u.controlsBar.SetText(controlsHelp())
+	u.controlsBar.SetText(u.controlsHelp())
 	u.controlsBar.SetTitle(" Controls ").SetBorder(true)
 
 	top := tview.NewFlex().
 		AddItem(u.streamTbl, 0, 1, false).
 		AddItem(u.ttTable, 0, 1, false)
 
+	logRow := tview.NewFlex().
+		AddItem(u.logView, 0, 3, false)
+	if u.ytTable != nil {
+		logRow.AddItem(u.ytTable, 60, 1, false)
+	}
+
 	u.root = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(top, 0, 8, false).
-		AddItem(u.logView, 0, 3, false).
+		AddItem(logRow, 0, 3, false).
 		AddItem(u.statusBar, 0, 1, false).
 		AddItem(u.controlsBar, 0, 1, false)
 
 	u.app.SetRoot(u.root, true)
 	u.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyCtrlC || event.Rune() == 'q' {
-			u.app.Stop()
+			u.appendLog(LogMessage{Level: logging.LevelInfo, Text: "Stopping application; finalizing active recordings..."})
+			go func() {
+				time.Sleep(250 * time.Millisecond)
+				u.app.Stop()
+			}()
 			return nil
 		}
 		if event.Rune() == 'l' || event.Rune() == 'L' {
@@ -152,21 +170,46 @@ func (u *UI) build() {
 			u.toggleRecordingSelected()
 			return nil
 		}
+		if event.Key() == tcell.KeyTab && u.ytTable != nil {
+			u.toggleFocus()
+			return nil
+		}
+		if event.Rune() == 'v' || event.Rune() == 'V' {
+			u.openYouTubeSelected(false)
+			return nil
+		}
+		if event.Rune() == 'f' || event.Rune() == 'F' {
+			u.openYouTubeSelected(true)
+			return nil
+		}
+		if event.Key() == tcell.KeyEsc {
+			u.stopYouTubePreview()
+			return nil
+		}
 		return event
 	})
 	u.app.SetFocus(u.streamTbl)
 }
 
 // controlsHelp renders the keybinding legend shown in the controls bar.
-func controlsHelp() string {
+func (u *UI) controlsHelp() string {
 	key := func(k string) string { return fmt.Sprintf("[yellow::b]%s[-:-:-]", k) }
+	help := "{l} Listen   {s} Stop audio   {d} Toggle recording"
+	if u.ytTable != nil {
+		help = "{l} Listen   {s} Stop audio   {d} Toggle rec/mode   {tab} Streams/YouTube   {v} mpv   {f} Fullscreen   {esc} Close mpv"
+	}
+	help += "   {nav} Select stream   {q} Quit"
 	return strings.NewReplacer(
 		"{l}", key("l"),
 		"{s}", key("s"),
 		"{d}", key("d"),
+		"{tab}", key("Tab"),
+		"{v}", key("v"),
+		"{f}", key("f"),
+		"{esc}", key("Esc"),
 		"{nav}", key("\u2191/\u2193"),
 		"{q}", key("q"),
-	).Replace("{l} Listen   {s} Stop audio   {d} Toggle recording   {nav} Select stream   {q} Quit")
+	).Replace(help)
 }
 
 func newTable(title string, selectable bool) *tview.Table {
@@ -192,6 +235,9 @@ func (u *UI) Stop() {
 
 func (u *UI) Close() {
 	u.listener.Stop()
+	if u.youtube != nil {
+		u.youtube.StopPreview()
+	}
 }
 
 func (u *UI) RunRefresh(ctx context.Context) {
@@ -211,6 +257,7 @@ func (u *UI) RunRefresh(ctx context.Context) {
 func (u *UI) refresh() {
 	streamRows := u.buildStreamRows()
 	ttRows := u.buildTimetableRows()
+	ytRows := u.buildYouTubeRows()
 	status := u.buildStatusBar()
 
 	u.app.QueueUpdateDraw(func() {
@@ -224,6 +271,13 @@ func (u *UI) refresh() {
 			ttRows,
 			false,
 		)
+		if u.ytTable != nil {
+			renderCells(u.ytTable,
+				[]string{"Day", "Mode", "State", "Rec", "mpv", "Check"},
+				ytRows,
+				true,
+			)
+		}
 		u.statusBar.SetText(status)
 	})
 }
@@ -309,6 +363,66 @@ func (u *UI) buildTimetableRows() [][]cell {
 	return rows
 }
 
+func (u *UI) buildYouTubeRows() [][]cell {
+	if u.youtube == nil {
+		return nil
+	}
+	snaps := u.youtube.Snapshot()
+	rows := make([][]cell, 0, len(snaps))
+	for _, s := range snaps {
+		rec := "-"
+		if s.Recording {
+			rec = "Yes"
+		}
+		preview := "-"
+		if s.Previewing {
+			preview = "Open"
+			if s.Fullscreen {
+				preview = "Full"
+			}
+		}
+		check := "-"
+		if !s.LastChecked.IsZero() {
+			check = s.LastChecked.In(util.Berlin()).Format("15:04")
+		}
+		rows = append(rows, []cell{
+			{util.Sanitize(s.Name), tcell.ColorDefault},
+			{util.Sanitize(s.Mode.Label()), youtubeModeColor(s.Mode)},
+			{util.Sanitize(string(s.State)), youtubeStateColor(s.State)},
+			{rec, tcell.ColorDefault},
+			{preview, tcell.ColorDefault},
+			{check, tcell.ColorDefault},
+		})
+	}
+	return rows
+}
+
+func youtubeStateColor(state youtube.State) tcell.Color {
+	switch state {
+	case youtube.StateRecording:
+		return colorRecording
+	case youtube.StateTrailer, youtube.StateChecking, youtube.StateRecovering:
+		return colorOnline
+	case youtube.StateError:
+		return tcell.ColorRed
+	case youtube.StateDisabled, youtube.StateNotLive:
+		return colorOffline
+	default:
+		return tcell.ColorDefault
+	}
+}
+
+func youtubeModeColor(mode youtube.RecordMode) tcell.Color {
+	switch mode {
+	case youtube.ModeNone:
+		return colorOffline
+	case youtube.ModeAudio:
+		return colorOnline
+	default:
+		return colorRecording
+	}
+}
+
 func (u *UI) buildStatusBar() string {
 	audio := u.listener.Snapshot()
 	audioText := string(audio.State)
@@ -331,6 +445,17 @@ func (u *UI) buildStatusBar() string {
 		hint,
 		diskText,
 	))
+}
+
+func (u *UI) toggleFocus() {
+	if u.ytTable == nil {
+		return
+	}
+	if u.app.GetFocus() == u.ytTable {
+		u.app.SetFocus(u.streamTbl)
+		return
+	}
+	u.app.SetFocus(u.ytTable)
 }
 
 func (u *UI) listenSelected() {
@@ -364,7 +489,33 @@ func (u *UI) stopListening() {
 	u.appendLog(LogMessage{Level: logging.LevelInfo, Text: "TUI audio stopped."})
 }
 
+func (u *UI) openYouTubeSelected(fullscreen bool) {
+	if u.youtube == nil || !u.youtube.PreviewSupported() {
+		u.appendLog(LogMessage{Level: logging.LevelWarn, Text: "YouTube mpv preview is not available on this platform."})
+		return
+	}
+	feed, ok := u.selectedYouTube()
+	if !ok {
+		u.appendLog(LogMessage{Level: logging.LevelWarn, Text: "No YouTube feed selected."})
+		return
+	}
+	if err := u.youtube.OpenPreview(feed.Name, fullscreen); err != nil {
+		u.appendLog(LogMessage{Level: logging.LevelError, Text: fmt.Sprintf("[YouTube %s] mpv preview failed: %s", feed.Name, err)})
+	}
+}
+
+func (u *UI) stopYouTubePreview() {
+	if u.youtube == nil || !u.youtube.PreviewSupported() {
+		return
+	}
+	u.youtube.StopPreview()
+}
+
 func (u *UI) toggleRecordingSelected() {
+	if u.ytTable != nil && u.app.GetFocus() == u.ytTable {
+		u.toggleYouTubeModeSelected()
+		return
+	}
 	stream, ok := u.selectedStream()
 	if !ok {
 		u.appendLog(LogMessage{Level: logging.LevelWarn, Text: "No stream selected."})
@@ -376,6 +527,24 @@ func (u *UI) toggleRecordingSelected() {
 		state = "disabled"
 	}
 	u.appendLog(LogMessage{Level: logging.LevelInfo, Text: fmt.Sprintf("[%s] Recording %s.", stream.Stage, state)})
+}
+
+func (u *UI) toggleYouTubeModeSelected() {
+	if u.youtube == nil {
+		u.appendLog(LogMessage{Level: logging.LevelWarn, Text: "No YouTube feed selected."})
+		return
+	}
+	feed, ok := u.selectedYouTube()
+	if !ok {
+		u.appendLog(LogMessage{Level: logging.LevelWarn, Text: "No YouTube feed selected."})
+		return
+	}
+	mode, err := u.youtube.ToggleMode(feed.Name)
+	if err != nil {
+		u.appendLog(LogMessage{Level: logging.LevelError, Text: fmt.Sprintf("[YouTube %s] Toggle failed: %s", feed.Name, err)})
+		return
+	}
+	u.appendLog(LogMessage{Level: logging.LevelInfo, Text: fmt.Sprintf("[YouTube %s] Recording mode: %s.", feed.Name, mode.Label())})
 }
 
 func (u *UI) selectedStream() (status.Stream, bool) {
@@ -393,6 +562,31 @@ func (u *UI) selectedStream() (status.Stream, bool) {
 	}
 	u.streamTbl.Select(idx+1, 0)
 	return streams[idx], true
+}
+
+func (u *UI) selectedYouTube() (youtube.Snapshot, bool) {
+	if u.youtube == nil {
+		return youtube.Snapshot{}, false
+	}
+	snaps := u.youtube.Snapshot()
+	if len(snaps) == 0 {
+		return youtube.Snapshot{}, false
+	}
+	row := 1
+	if u.ytTable != nil {
+		row, _ = u.ytTable.GetSelection()
+	}
+	if row < 1 {
+		row = 1
+	}
+	idx := row - 1
+	if idx >= len(snaps) {
+		idx = len(snaps) - 1
+	}
+	if u.ytTable != nil {
+		u.ytTable.Select(idx+1, 0)
+	}
+	return snaps[idx], true
 }
 
 func (u *UI) drainLogs() {

@@ -3,11 +3,17 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
+
+type YouTubeFeed struct {
+	Name string
+	URL  string
+}
 
 type Config struct {
 	APIBaseURL           string
@@ -24,6 +30,10 @@ type Config struct {
 	StalledCheckInterval time.Duration
 	StalledTimeout       time.Duration
 	TUIUpdateInterval    time.Duration
+	YouTubeEnabled       bool
+	YouTubeFeeds         []YouTubeFeed
+	YouTubePollInterval  time.Duration
+	YouTubeStalledAfter  time.Duration
 }
 
 func Default() Config {
@@ -60,6 +70,16 @@ func Default() Config {
 		StalledCheckInterval: 30 * time.Second,
 		StalledTimeout:       60 * time.Second,
 		TUIUpdateInterval:    envDurationMSOr("TUI_UPDATE_INTERVAL_MS", 2_000*time.Millisecond),
+		YouTubeEnabled:       envBoolOr("YOUTUBE_ENABLED", runtime.GOOS != "linux"),
+		YouTubeFeeds: []YouTubeFeed{
+			{Name: "Friday", URL: "https://www.youtube.com/watch?v=tY4BNcXezb0"},
+			{Name: "Saturday", URL: "https://www.youtube.com/watch?v=W8h8JMNjQ1E"},
+			{Name: "Sunday", URL: "https://www.youtube.com/watch?v=AkNo5ckWTBk"},
+			// Temporary live test feed; remove this entry after validation.
+			{Name: "Test", URL: "https://www.youtube.com/watch?v=uXNU0XgGZhs"},
+		},
+		YouTubePollInterval: envDurationMSOr("YOUTUBE_POLL_INTERVAL_MS", 30_000*time.Millisecond),
+		YouTubeStalledAfter: envDurationMSOr("YOUTUBE_STALLED_TIMEOUT_MS", 90_000*time.Millisecond),
 	}
 }
 

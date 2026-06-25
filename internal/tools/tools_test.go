@@ -12,10 +12,14 @@ func TestResolveBundled(t *testing.T) {
 
 	yt := filepath.Join(dir, ytDLPName())
 	ff := filepath.Join(dir, ffmpegName())
+	mpv := filepath.Join(dir, mpvName())
 	if err := os.WriteFile(yt, []byte("x"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(ff, []byte("x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mpv, []byte("x"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -25,6 +29,9 @@ func TestResolveBundled(t *testing.T) {
 	}
 	if p.FFmpeg != ff {
 		t.Errorf("FFmpeg = %q, want %q", p.FFmpeg, ff)
+	}
+	if p.MPV != mpv {
+		t.Errorf("MPV = %q, want %q", p.MPV, mpv)
 	}
 	if p.FFmpegDir != dir {
 		t.Errorf("FFmpegDir = %q, want %q", p.FFmpegDir, dir)
@@ -36,15 +43,20 @@ func TestResolveFallbackToPath(t *testing.T) {
 	p := Resolve("")
 	want := "yt-dlp"
 	ffwant := "ffmpeg"
+	mpvwant := "mpv"
 	if runtime.GOOS == "windows" {
 		want = "yt-dlp.exe"
 		ffwant = "ffmpeg.exe"
+		mpvwant = "mpv.exe"
 	}
 	if p.YtDLP != want {
 		t.Errorf("YtDLP = %q, want %q", p.YtDLP, want)
 	}
 	if p.FFmpeg != ffwant {
 		t.Errorf("FFmpeg = %q, want %q", p.FFmpeg, ffwant)
+	}
+	if p.MPV != mpvwant {
+		t.Errorf("MPV = %q, want %q", p.MPV, mpvwant)
 	}
 	if p.FFmpegDir != "" {
 		t.Errorf("FFmpegDir = %q, want empty", p.FFmpegDir)
@@ -57,6 +69,9 @@ func TestResolveFallbackToPath(t *testing.T) {
 	}
 	if p.FFmpeg != ffwant {
 		t.Errorf("FFmpeg = %q, want %q", p.FFmpeg, ffwant)
+	}
+	if p.MPV != mpvwant {
+		t.Errorf("MPV = %q, want %q", p.MPV, mpvwant)
 	}
 	if p.FFmpegDir != "" {
 		t.Errorf("FFmpegDir = %q, want empty", p.FFmpegDir)

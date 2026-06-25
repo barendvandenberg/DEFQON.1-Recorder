@@ -1,9 +1,10 @@
 // Package prefs persists user preferences that should survive a process
-// restart, such as which channels are allowed to be recorded.
+// restart, such as which channels are allowed to be recorded and which
+// YouTube recording mode each feed should use.
 //
-// The file is a tiny INI subset: a single [recording] section with
-// "<channel>=<on|off>" lines. Only the standard library is used on purpose to
-// avoid pulling in an INI dependency for something this small.
+// The file is a tiny INI subset with [recording] and [youtube] sections. Only
+// the standard library is used on purpose to avoid pulling in an INI dependency
+// for something this small.
 package prefs
 
 import (
@@ -19,46 +20,64 @@ import (
 	"sync"
 )
 
-const recordingSection = "[recording]"
+const (
+	recordingSection = "[recording]"
+	youtubeSection   = "[youtube]"
+)
+
+// Preferences is the complete persisted settings file.
+type Preferences struct {
+	Recording map[string]bool
+	YouTube   map[string]string
+}
 
 // Store reads and writes the preferences file. It keeps an in-memory copy so
-// single-channel updates can be written without re-reading the file each time.
+// single-entry updates can be written without re-reading the file each time.
 type Store struct {
 	path string
 
 	mu   sync.Mutex
-	data map[string]bool
+	data Preferences
 }
 
 func New(path string) *Store {
 	return &Store{
 		path: path,
-		data: map[string]bool{},
+		data: emptyPreferences(),
 	}
 }
 
-// Load reads the preferences file into the store and returns a copy. A missing
-// file is not an error: an empty map is returned so callers can seed defaults.
+// Load reads only the recording preferences for older callers.
 func (s *Store) Load() (map[string]bool, error) {
+	p, err := s.LoadAll()
+	if err != nil {
+		return nil, err
+	}
+	return p.Recording, nil
+}
+
+// LoadAll reads the preferences file into the store and returns a copy. A missing
+// file is not an error: an empty map is returned so callers can seed defaults.
+func (s *Store) LoadAll() (Preferences, error) {
 	raw, err := os.ReadFile(s.path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			s.mu.Lock()
-			s.data = map[string]bool{}
+			s.data = emptyPreferences()
 			s.mu.Unlock()
-			return map[string]bool{}, nil
+			return emptyPreferences(), nil
 		}
-		return nil, fmt.Errorf("read %s: %w", s.path, err)
+		return Preferences{}, fmt.Errorf("read %s: %w", s.path, err)
 	}
 
 	data, err := parse(raw)
 	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", s.path, err)
+		return Preferences{}, fmt.Errorf("parse %s: %w", s.path, err)
 	}
 
 	s.mu.Lock()
 	s.data = data
-	out := copyMap(data)
+	out := copyPreferences(data)
 	s.mu.Unlock()
 	return out, nil
 }
@@ -66,22 +85,69 @@ func (s *Store) Load() (map[string]bool, error) {
 // Save updates a single channel and rewrites the file atomically.
 func (s *Store) Save(channel string, enabled bool) error {
 	s.mu.Lock()
-	s.data[channel] = enabled
-	snapshot := copyMap(s.data)
+	ensurePreferences(&s.data)
+	s.data.Recording[channel] = enabled
+	snapshot := copyPreferences(s.data)
 	s.mu.Unlock()
 	return write(s.path, snapshot)
 }
 
-// SaveAll replaces every stored preference and rewrites the file atomically.
+// SaveYouTube updates a single YouTube feed mode and rewrites the file
+// atomically.
+func (s *Store) SaveYouTube(feed, mode string) error {
+	s.mu.Lock()
+	ensurePreferences(&s.data)
+	s.data.YouTube[feed] = mode
+	snapshot := copyPreferences(s.data)
+	s.mu.Unlock()
+	return write(s.path, snapshot)
+}
+
+// SaveAll replaces recording preferences and rewrites the file atomically.
+// YouTube preferences already loaded in this Store are preserved.
 func (s *Store) SaveAll(data map[string]bool) error {
 	s.mu.Lock()
-	s.data = copyMap(data)
-	snapshot := copyMap(s.data)
+	ensurePreferences(&s.data)
+	s.data.Recording = copyBoolMap(data)
+	snapshot := copyPreferences(s.data)
 	s.mu.Unlock()
 	return write(s.path, snapshot)
 }
 
-func copyMap(in map[string]bool) map[string]bool {
+// SavePreferences replaces the whole preferences file and rewrites it atomically.
+func (s *Store) SavePreferences(data Preferences) error {
+	s.mu.Lock()
+	s.data = copyPreferences(data)
+	ensurePreferences(&s.data)
+	snapshot := copyPreferences(s.data)
+	s.mu.Unlock()
+	return write(s.path, snapshot)
+}
+
+func emptyPreferences() Preferences {
+	return Preferences{
+		Recording: map[string]bool{},
+		YouTube:   map[string]string{},
+	}
+}
+
+func ensurePreferences(p *Preferences) {
+	if p.Recording == nil {
+		p.Recording = map[string]bool{}
+	}
+	if p.YouTube == nil {
+		p.YouTube = map[string]string{}
+	}
+}
+
+func copyPreferences(in Preferences) Preferences {
+	return Preferences{
+		Recording: copyBoolMap(in.Recording),
+		YouTube:   copyStringMap(in.YouTube),
+	}
+}
+
+func copyBoolMap(in map[string]bool) map[string]bool {
 	out := make(map[string]bool, len(in))
 	for k, v := range in {
 		out[k] = v
@@ -89,9 +155,17 @@ func copyMap(in map[string]bool) map[string]bool {
 	return out
 }
 
-func parse(raw []byte) (map[string]bool, error) {
-	out := map[string]bool{}
-	inSection := false
+func copyStringMap(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+func parse(raw []byte) (Preferences, error) {
+	out := emptyPreferences()
+	section := ""
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -99,10 +173,17 @@ func parse(raw []byte) (map[string]bool, error) {
 			continue
 		}
 		if line[0] == '[' {
-			inSection = strings.EqualFold(line, recordingSection)
+			switch {
+			case strings.EqualFold(line, recordingSection):
+				section = recordingSection
+			case strings.EqualFold(line, youtubeSection):
+				section = youtubeSection
+			default:
+				section = ""
+			}
 			continue
 		}
-		if !inSection {
+		if section == "" {
 			continue
 		}
 		key, val, ok := strings.Cut(line, "=")
@@ -113,7 +194,15 @@ func parse(raw []byte) (map[string]bool, error) {
 		if key == "" {
 			continue
 		}
-		out[key] = parseBool(strings.TrimSpace(val))
+		val = strings.TrimSpace(val)
+		switch section {
+		case recordingSection:
+			out.Recording[key] = parseBool(val)
+		case youtubeSection:
+			if val != "" {
+				out.YouTube[key] = val
+			}
+		}
 	}
 	return out, scanner.Err()
 }
@@ -136,7 +225,7 @@ func formatBool(b bool) string {
 
 // write renders the preferences and replaces the file atomically via a temp
 // file in the same directory, so a crash mid-write cannot corrupt it.
-func write(path string, data map[string]bool) error {
+func write(path string, data Preferences) error {
 	dir := filepath.Dir(path)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -147,16 +236,29 @@ func write(path string, data map[string]bool) error {
 	var buf bytes.Buffer
 	buf.WriteString("# DEFQON.1 Recorder preferences\n")
 	buf.WriteString("# Recording toggle per channel: on = record, off = skip.\n")
-	buf.WriteString("# This file is rewritten whenever a channel is toggled in the TUI (d key).\n")
+	buf.WriteString("# YouTube modes: video_audio = video + MP3, audio = MP3 only, none = skip.\n")
+	buf.WriteString("# This file is rewritten whenever a recording mode is toggled in the TUI (d key).\n")
 	buf.WriteString(recordingSection + "\n")
 
-	keys := make([]string, 0, len(data))
-	for k := range data {
+	ensurePreferences(&data)
+
+	keys := make([]string, 0, len(data.Recording))
+	for k := range data.Recording {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		fmt.Fprintf(&buf, "%s=%s\n", k, formatBool(data[k]))
+		fmt.Fprintf(&buf, "%s=%s\n", k, formatBool(data.Recording[k]))
+	}
+
+	buf.WriteString("\n" + youtubeSection + "\n")
+	keys = make([]string, 0, len(data.YouTube))
+	for k := range data.YouTube {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Fprintf(&buf, "%s=%s\n", k, data.YouTube[k])
 	}
 
 	tmp, err := os.CreateTemp(dir, ".recorder-prefs-*")
