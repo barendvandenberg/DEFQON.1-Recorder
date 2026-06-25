@@ -6,27 +6,27 @@ A powerful terminal-based application for recording multiple Mixlr streams simul
 
 <a href='https://ko-fi.com/revunix' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://cdn.ko-fi.com/cdn/kofi1.png?v=3' border='0' alt='Buy Me a Coffee' /></a>
 
-## ✨ Features
+## Features
 
-- 🎵 **Simultaneous recording** of all 14 Mixlr stages
-- 🖥️ **Live TUI dashboard** with two tables, a log panel, a status bar and a controls bar
-- 🟢 **Online & offline tracking** — every stage is always listed, with its current state
-- 🎨 **Real stage colors** — each stage is rendered in its actual DEFQON.1 signature color
-- 📊 **Real-time listener counts**, file sizes and set-end countdowns
-- 📅 **Built-in timetable** with DJ set times, current-DJ detection and "starts in" countdowns
-- 🔍 **Live detection** straight from the Mixlr `data.attributes.live` flag
-- 🛡️ **Robust recovery** — stalled streams are detected and restarted automatically
-- 🎧 **In-TUI audio playback** — listen to any live stream right in the terminal (`l` / `s`, macOS/Windows builds)
-- 🔇 **Selective recording** — toggle individual channels on/off (`d`); skipped stages show **Skip** and are never recorded
-- 💾 **Persisted preferences** — your recording toggles are saved to `recorder.ini` and restored on restart
-- 🏷️ **Scene-style file naming** — recordings are named like audio-scene releases (e.g. `DEFQON.1.2026.BLUE.…-USER`)
-- 🎼 **ID3 tags + artwork** — per-set files are tagged (artist=DJ, album, year, genre) with the Mixlr channel artwork embedded
-- ✂️ **Per-set splitting** — the raw recording is kept untouched; a per-stage folder holds one tagged MP3 per timetable set
-- 💽 **Disk usage** — total recorded size and free space shown live in the status bar
-- 🚀 **Cross-platform** — one static binary for macOS, Linux and Windows (no runtime needed)
-- ⚡ **Graceful shutdown** — `q`, `Ctrl+C` and Docker `SIGTERM` all finish recordings cleanly
+- **Simultaneous recording** of all 14 Mixlr stages
+- **Live TUI dashboard** with two tables, a log panel, a status bar and a controls bar
+- **Online & offline tracking** — every stage is always listed, with its current state
+- **Real stage colors** — each stage is rendered in its actual DEFQON.1 signature color
+- **Real-time listener counts**, file sizes and set-end countdowns
+- **Built-in timetable** with DJ set times, current-DJ detection and "starts in" countdowns
+- **Live detection** straight from the Mixlr `data.attributes.live` flag
+- **Robust recovery** — stalled streams are detected and restarted automatically
+- **In-TUI audio playback** — listen to any live stream right in the terminal (`l` / `s`, macOS/Windows builds)
+- **Selective recording** — toggle individual channels on/off (`d`); skipped stages show **Skip** and are never recorded
+- **Persisted preferences** — your recording toggles are saved to `recorder.ini` and restored on restart
+- **Scene-style file naming** — recordings are named like audio-scene releases (e.g. `DEFQON.1.2026.BLUE.…-USER`)
+- **ID3 tags + artwork** — per-set files are tagged (artist=DJ, album, year, genre) with the Mixlr channel artwork embedded
+- **Per-set splitting** — the raw recording is kept untouched; a per-stage folder holds one tagged MP3 per timetable set
+- **Disk usage** — total recorded size and free space shown live in the status bar
+- **Cross-platform** — one static binary for macOS, Linux and Windows (no runtime needed)
+- **Graceful shutdown** — `q`, `Ctrl+C` and Docker `SIGTERM` all finish recordings cleanly
 
-## 🖼️ The Interface
+## The Interface
 
 The dashboard is split into five regions:
 
@@ -56,13 +56,13 @@ The dashboard is split into five regions:
 - **Controls** is a always-visible keybinding legend.
 - Stage names appear in their real color (RED, BLUE, MAGENTA, UV, …).
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Language:** Go (1.26+)
 - **TUI:** [tview](https://github.com/rivo/tview) / [tcell](https://github.com/gdamore/tcell)
 - **Recording:** [yt-dlp](https://github.com/yt-dlp/yt-dlp) + [FFmpeg](https://ffmpeg.org/)
 
-## 🏗️ Architecture
+## Architecture
 
 The codebase follows a strict separation of concerns — the UI only renders
 snapshots produced by the domain packages.
@@ -89,7 +89,7 @@ registry feeding the TUI, the `timetable` enriching artist/ends-in columns,
 recording toggles flowing `TUI → Controller (policy) → prefs`, and TUI audio
 flowing `TUI → listener → ffmpeg → oto`.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Runtime prerequisites
 
@@ -139,7 +139,7 @@ go build -o defqon-recorder ./cmd/recorder
 ./defqon-recorder
 ```
 
-## 📦 Cross-platform releases
+## Cross-platform releases
 
 Build static binaries for all platforms and bundle distributable archives:
 
@@ -162,7 +162,7 @@ bundle yt-dlp + FFmpeg so they are self-contained:
 The version in the archive name is derived from `git describe` — set a tag
 (e.g. `git tag v1.0.0`) before releasing for clean versioned names.
 
-## 🐳 Docker
+## Docker
 
 ```bash
 make docker
@@ -177,7 +177,7 @@ toggles survive container restarts — no extra mount needed.
 TUI audio playback (`l`) is only available on the native macOS/Windows builds;
 the Linux/Docker build runs headless without an audio backend.
 
-## 🎛️ Controls
+## Controls
 
 | Key          | Action                                              |
 |--------------|-----------------------------------------------------|
@@ -203,7 +203,7 @@ defqon1blue=on
 defqon1red=off
 ```
 
-## 📂 File Naming
+## File Naming
 
 Recordings are saved as MP3 using an audio-scene-style release name:
 
@@ -253,7 +253,7 @@ are not mapped fall back to `ID3_GENRE` (default `Hardstyle`). Disable splitting
 with `SPLIT_SETS=false`; customize the album and fallback genre via `ID3_ALBUM`
 / `ID3_GENRE`.
 
-## 🛠️ Configuration
+## Configuration
 
 The application works with sensible defaults — no configuration required.
 
@@ -273,14 +273,14 @@ The application works with sensible defaults — no configuration required.
 | `CHECK_INTERVAL_MS`    | Stream check interval (ms)                   | `60000`             |
 | `TUI_UPDATE_INTERVAL_MS` | UI refresh rate (ms)                        | `2000`              |
 
-## 🧪 Testing
+## Testing
 
 ```bash
 make check       # fmt + vet + test
 go test ./...    # tests only
 ```
 
-## 🔧 Make Targets
+## Make Targets
 
 ```bash
 make help
@@ -299,11 +299,11 @@ make help
 | `docker`  | Build the container image                            |
 | `clean`   | Remove build artifacts                               |
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Made with care for the DEFQON.1 community
 - Powered by [Mixlr](https://mixlr.com/)
