@@ -76,7 +76,7 @@ func Default() Config {
 			{Name: "Saturday", URL: "https://www.youtube.com/watch?v=W8h8JMNjQ1E"},
 			{Name: "Sunday", URL: "https://www.youtube.com/watch?v=AkNo5ckWTBk"},
 			// Temporary live test feed; remove this entry after validation.
-			{Name: "Test", URL: "https://www.youtube.com/watch?v=uXNU0XgGZhs"},
+			{Name: "Test", URL: "https://www.youtube.com/watch?v=Qnkxm62y8zM"},
 		},
 		YouTubePollInterval: envDurationMSOr("YOUTUBE_POLL_INTERVAL_MS", 30_000*time.Millisecond),
 		YouTubeStalledAfter: envDurationMSOr("YOUTUBE_STALLED_TIMEOUT_MS", 90_000*time.Millisecond),

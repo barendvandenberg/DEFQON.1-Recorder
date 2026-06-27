@@ -241,7 +241,7 @@ Current configured YouTube feeds:
 | Friday   | `https://www.youtube.com/watch?v=tY4BNcXezb0` |
 | Saturday | `https://www.youtube.com/watch?v=W8h8JMNjQ1E` |
 | Sunday   | `https://www.youtube.com/watch?v=AkNo5ckWTBk` |
-| Test     | `https://www.youtube.com/watch?v=uXNU0XgGZhs` |
+| Test     | `https://www.youtube.com/watch?v=Qnkxm62y8zM` |
 
 The `Test` feed is temporary and can be removed from `internal/config/config.go`
 after validation.
